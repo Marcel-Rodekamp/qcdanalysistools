@@ -69,7 +69,7 @@ def jackknife_est(t_data, t_n = 1, t_est = None, t_subdata_sets = None, t_random
 
     return t_data.shape[0]*t_est-(t_data.shape[0]-1)*t_avg(t_subdata_sets,axis=0, **kwargs)
 
-def jackknife(t_data, t_n = 1, t_avg = np.average, t_random_leaveout = False, t_num_ran_indices=None, t_bootstraped = False, t_blocked = False, t_num_blocks = None, **kwargs):
+def jackknife(t_data, t_n = 1, t_avg = np.average, t_random_leaveout = False, t_num_ran_indices=None, t_blocked = False, t_num_blocks = None, **kwargs):
     """
         t_data: numpy.ndarray
             Data array, containing the raw data of an observable or raw data on
@@ -88,12 +88,6 @@ def jackknife(t_data, t_n = 1, t_avg = np.average, t_random_leaveout = False, t_
         t_num_ran_indices: int, default: None
             Defines the number of random indices drawn in the random leave out
             method. If default is used it is determined to half data size.
-        t_bootstraped: bool, default: False
-            Set to `True` if the jackknife should be combined with statistical
-            bootstrap i.e.
-                * randomly drawn leave out indices
-                * Jackknife bias improved estimator
-                * Bootstrap Variance
         t_blocked: bool, default: False
             Set to `True` if the Jackknife should be combined with the blocking
             method i.e.
@@ -116,11 +110,7 @@ def jackknife(t_data, t_n = 1, t_avg = np.average, t_random_leaveout = False, t_
     est = None
     var = None
 
-    if t_blocked and t_bootstraped:
-        pass
-    elif t_bootstraped:
-        pass
-    elif t_blocked:
+    if t_blocked:
         pass
     else:
         # simple leave n out (randomnized)
