@@ -10,17 +10,6 @@ def _leave_out(t_data,t_num_ran_indices):
     from qcdanalysistools.jackknife import _leave_n_out_ran
     return _leave_n_out_ran(t_data,t_num_ran_indices,t_n=1)
 
-def bootstrap_var(t_data, t_num_ran_indices = None):
-    # create subdata sets
-    t_num_ran_indices = t_data.shape[0]//2 if t_num_ran_indices==None else t_num_ran_indices
-    subdata_sets = _leave_out(t_data,t_num_ran_indices=t_num_ran_indices)
-
-    # average in each block for index details see jackknife._leave_n_out_ran
-    # documentation.
-    est = np.average( subdata_sets, axis = 1 )
-
-    return np.var( est, axis = 0 )
-
 def bootstrap_est(t_data, t_num_ran_indices = None):
     # create subdata sets
     t_num_ran_indices = t_data.shape[0]//2 if t_num_ran_indices==None else t_num_ran_indices
@@ -31,6 +20,17 @@ def bootstrap_est(t_data, t_num_ran_indices = None):
     # over the subdata sets, for index details see jackknife._leave_n_out_ran
     # documentation.
     return np.average(np.average(subdata_sets, axis = 1), axis = 0)
+
+def bootstrap_var(t_data, t_num_ran_indices = None):
+    # create subdata sets
+    t_num_ran_indices = t_data.shape[0]//2 if t_num_ran_indices==None else t_num_ran_indices
+    subdata_sets = _leave_out(t_data,t_num_ran_indices=t_num_ran_indices)
+
+    # average in each block for index details see jackknife._leave_n_out_ran
+    # documentation.
+    est = np.average( subdata_sets, axis = 1 )
+
+    return np.var( est, axis = 0 )
 
 def bootstrap(t_data, t_num_ran_indices = None, t_blocked = False, t_num_blocks = None):
     """
