@@ -26,7 +26,7 @@ def _leave_n_out(t_data, t_n = 1):
 
 def _leave_n_out_ran(t_data,t_num_ran_indices,t_n=1):
 
-    subdata_sets = np.zeros(shape=(t_data.shape[0]//t_n,*t_data.shape[1:]))
+    subdata_sets = [None]*(t_data.shape[0]//t_n)
 
     leave_out_index_list = np.random.randint(0,high=t_data.shape[0]-1,size=t_num_ran_indices)
 
