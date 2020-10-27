@@ -28,9 +28,7 @@ def bootstrap_var(t_data, t_num_ran_indices = None):
 
     # average in each block for index details see jackknife._leave_n_out_ran
     # documentation.
-    est = np.average( subdata_sets, axis = 1 )
-
-    return np.var( est, axis = 0 )
+    return np.var( np.average( subdata_sets, axis = 1 ), axis = 0 )
 
 def bootstrap(t_data, t_num_ran_indices = None, t_blocked = False, t_num_blocks = None):
     """
