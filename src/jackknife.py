@@ -26,18 +26,18 @@ def _leave_n_out(t_data, t_n = 1):
 
 def _leave_n_out_ran(t_data,t_num_ran_indices,t_n=1):
 
-    subdata_sets = [None]*(t_data.shape[0]//t_n)
+    subdata_sets = [None]*(t_num_ran_indices)
 
     leave_out_index_list = np.random.randint(0,high=t_data.shape[0]-1,size=t_num_ran_indices)
 
-    for k in leave_out_index_list:
+    for k in range(len(leave_out_index_list)):
         subdata_sets[k] = np.delete(
             t_data,
-            [ k+i if k+i < t_data.shape[0] else i for i in range(t_n) ],
+            [ leave_out_index_list[k]+i if leave_out_index_list[k]+i < t_data.shape[0] else i for i in range(t_n) ],
             axis = 0,
         )
 
-    return subdata_sets
+    return np.array(subdata_sets)
 
 def jackknife_var(t_data, t_n = 1, t_est = None, t_subdata_sets = None, t_random_leaveout = False, t_num_ran_indices=None, t_avg = np.average, **kwargs):
     if t_est == None:
