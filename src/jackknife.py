@@ -40,12 +40,12 @@ def _leave_n_out_ran(t_data,t_num_ran_indices,t_n=1):
     return np.array(subdata_sets)
 
 def jackknife_var(t_data, t_n = 1, t_est = None, t_subdata_sets = None, t_random_leaveout = False, t_num_ran_indices=None, t_avg = np.average, **kwargs):
-    if t_est == None:
+    if t_est is None:
         t_est = t_avg(t_data, axis = 0, **kwargs)
 
-    if t_subdata_sets == None:
+    if t_subdata_sets is None:
         if t_random_leaveout:
-            t_num_ran_indices = t_data.shape[0]//2 if t_num_ran_indices==None else t_num_ran_indices
+            t_num_ran_indices = t_data.shape[0]//2 if t_num_ran_indices is None else t_num_ran_indices
             t_subdata_sets = _leave_n_out_ran(t_data,t_num_ran_indices=t_num_ran_indices, t_n = t_n)
         else:
             t_subdata_sets = _leave_n_out(t_data, t_n = t_n)
@@ -57,12 +57,12 @@ def jackknife_var(t_data, t_n = 1, t_est = None, t_subdata_sets = None, t_random
     return var * (t_data.shape[0]-1) / t_data.shape[0]
 
 def jackknife_est(t_data, t_n = 1, t_est = None, t_subdata_sets = None, t_random_leaveout = False, t_num_ran_indices=None, t_avg = np.average, **kwargs):
-    if t_est == None:
+    if t_est is None:
         t_est = t_avg(t_data, axis = 0, **kwargs)
 
-    if t_subdata_sets == None:
+    if t_subdata_sets is None:
         if t_random_leaveout:
-            t_num_ran_indices = t_data.shape[0]//2 if t_num_ran_indices==None else t_num_ran_indices
+            t_num_ran_indices = t_data.shape[0]//2 if t_num_ran_indices is None else t_num_ran_indices
             t_subdata_sets = _leave_n_out_ran(t_data,t_num_ran_indices=t_num_ran_indices, t_n = t_n)
         else:
             t_subdata_sets = _leave_n_out(t_data, t_n = t_n)
