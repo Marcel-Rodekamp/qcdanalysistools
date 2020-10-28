@@ -1,6 +1,28 @@
 import numpy as np
 
 def get_block(t_data,t_block_id,t_block_size,t_is_end=False):
+    """
+        t_data: numpy.ndarray
+            Data which becomes sliced. It is assumed that axis = 0
+            represents the different data points in the set and all other axis'
+            account for the dimensionality of the estimator.
+        t_block_id: int
+            The number of the block which should be returned.
+        t_block_size: int
+            The size of the blocks in which t_data becomes blocked.
+        t_is_end: bool, default: False
+            If this is set to True the remainder of the data is returned, starting
+            at the index t_block_id*t_block_size.
+
+        Returns: numpy.ndarray
+            Data block. Let d be the total dimension of the estimator,
+            n_i denotes the number of elements in that particular dimension and
+            K = t_num_blocks be the number of blocks, then
+                subdata_sets.shape = (t_block_size,n_1,n_2,...,n_d)
+                                   = (t_block_size,t_data.shape[1:])
+
+        This functions returns a slice of the data t_data along the 0th axis.
+    """
     if t_is_end:
         return t_data[t_block_id*t_block_size : ]
     else:
@@ -19,7 +41,7 @@ def blocking_data(t_data,t_num_blocks):
             Set of data blocks. Let d be the total dimension of the estimator,
             n_i denotes the number of elements in that particular dimension and
             K = t_num_blocks be the number of blocks, then
-                subdata_sets.shape = (K,n_0,n_1,...,n_d) = (K,t_data.shape[1:])
+                subdata_sets.shape = (K,n_1,n_2,...,n_d) = (K,t_data.shape[1:])
 
         This functions blocks the data in K = t_num_blocks blocks.
     """
@@ -47,7 +69,7 @@ def blocking_est(t_data, t_num_blocks = 2):
             Estimator after blocking for each dimension of the estimator. Let
             d be the total dimension of the estimator, n_i denotes the number
             of elements in that particular dimension.
-                est.shape = (n_0,n_1,...,n_d) = t_data.shape[1:]
+                est.shape = (n_1,n_2,...,n_d) = t_data.shape[1:]
 
         This functions blocks the data in K=t_num_blocks blocks and determines
         the estimator (numpy.average) on each of these blocks. Then the average
@@ -76,7 +98,7 @@ def blocking_var(t_data, t_num_blocks = 2):
             Variance after blocking for each dimension of the estimator. Let
             d be the total dimension of the estimator, n_i denotes the number
             of elements in that particular dimension.
-                var.shape = (n_0,n_1,...,n_d) = t_data.shape[1:]
+                var.shape = (n_1,n_2,...,n_d) = t_data.shape[1:]
 
         This functions blocks the data in K=t_num_blocks blocks and determines
         the estimator (numpy.average) on each of these blocks. Then the variance
