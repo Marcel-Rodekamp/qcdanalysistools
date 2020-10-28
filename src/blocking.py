@@ -48,35 +48,50 @@ def var_per_num_blocks(t_data,t_num_blocks_range = None):
 
 def plot_var_per_num_blocks(t_data, t_num_blocks_range = None):
     """
-        t_var: function
-            Function to evaluate the variance e.g.
-                * numpy.var
-                * Bootstrap
-                * Jackknife
-                * Blocking ...
-        t_avg: function
-            Function to average or compute an observable (including averages)
-            Past to the blocking procedure and t_est if required.
+        t_data: numpy.array
+            Data to be processed by the blocking method
+        t_num_blocks_range: int, list of ints, default: None
+            Determines which number of blocks are used in the process.
+            * int: highest number of blocks, creating list of integers starting
+                   with 2 and step 1
+            * list of ints: each element is taken as a number of blocks
+            * None (default): Creating a list of integers starting with 2 and
+                              step 1.
 
-        TODO: This has not yet the desired generality, coming soon...
+        This function blocks the data with several number of blocks and for each
+        the variance of the data is computed.
+        The set of variances, created in this way, is then plotted and fitted with
+        the A/#NumBlocks ansatz.
+        The plot is not automatically saved rather only shown.
+
+        Requirements:
+            * matplotlib.pyplot
+            * lmfit
+
+        TODO:
+            * This has not yet the desired generality
+                * support for multidimensional estimators
+                * support for non standart variances i.e. bootstrap/jackknife
     """
     import matplotlib.pyplot as plt
     import lmfit
 
+    # create list of block numbers if not given
     if t_num_blocks_range is None:
         t_num_blocks_range = [i for i in range(2,t_data.shape[0]//2)]
     elif isinstance(t_num_blocks_range,int):
         t_num_blocks_range = [i for i in range(2,t_num_blocks_range)]
 
+    # get the variances for the different block numbers
     vars = var_per_num_blocks(t_data,
             t_num_blocks_range = t_num_blocks_range)
 
+    # fit the variances with A/#blockNumber
     model = lmfit.Model(lambda x,A: A/x, param_names=['A'],name="A/x")
-
     fit_result = model.fit(vars,x=t_num_blocks_range,A=1)
-
     print(fit_result.fit_report())
 
+    # plot the data and the fit
     plt.plot(t_num_blocks_range, vars,'x',
              label="Variance(#Blocks)")
     plt.plot(t_num_blocks_range, fit_result.best_fit,
@@ -87,4 +102,5 @@ def plot_var_per_num_blocks(t_data, t_num_blocks_range = None):
     plt.ylabel("Var(#Blocks)")
     plt.legend()
     plt.show()
+    # clear the plot so that other functions might not be disturbed
     plt.clf()
