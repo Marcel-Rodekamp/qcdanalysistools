@@ -7,6 +7,23 @@ def get_block(t_data,t_block_id,t_block_size,t_is_end=False):
         return t_data[t_block_id*t_block_size : (t_block_id+1)*t_block_size]
 
 def blocking_data(t_data,t_num_blocks):
+    """
+        t_data: numpy.ndarray
+            Data which becomes blocked. It is assumed that axis = 0
+            represents the different data points in the set and all other axis'
+            account for the dimensionality of the estimator.
+        t_num_blocks: int
+            Number of blocks in which t_data becomes devided
+
+        Returns: numpy.ndarray
+            Set of data blocks. Let d be the total dimension of the estimator,
+            n_i denotes the number of elements in that particular dimension and
+            K = t_num_blocks be the number of blocks, then
+                subdata_sets.shape = (K,n_0,n_1,...,n_d) = (K,t_data.shape[1:])
+
+        This functions blocks the data in K = t_num_blocks blocks.
+    """
+
     subdata_sets = [None]*t_num_blocks
 
     block_size = t_data.shape[0] // t_num_blocks
