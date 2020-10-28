@@ -9,6 +9,12 @@ from numpy import average
 
 def _leave_n_out(t_data, t_n = 1):
     """
+        t_data: numpy.ndarray
+            Data array, containing the raw data of an observable. It is assumed,
+            that axis=0 represents the data points of the method and subsequent
+            axis' are assumed to represent multidimensional estimators.
+        t_n: int, default: 1
+            Size of leave n out method.
 
         Returns: numpy.ndarray
             Returns a set of subdata sets where each subdata set contains N-t_n
@@ -46,6 +52,15 @@ def _leave_n_out(t_data, t_n = 1):
 
 def _leave_n_out_ran(t_data,t_num_ran_indices,t_n=1):
     """
+        t_data: numpy.ndarray
+            Data array, containing the raw data of an observable. It is assumed,
+            that axis=0 represents the data points of the method and subsequent
+            axis' are assumed to represent multidimensional estimators.
+        t_num_ran_indices: int, default: None
+            Defines the number of random indices drawn in the random leave out
+            method. If default is used it is determined to half data size.
+        t_n: int, default: 1
+            Size of leave n out method.
 
         Returns: numpy.ndarray
             Returns a set of subdata sets where each subdata set contains N-t_n
@@ -83,6 +98,32 @@ def _leave_n_out_ran(t_data,t_num_ran_indices,t_n=1):
     return subdata_sets
 
 def jackknife_est(t_data, t_n = 1, t_random_leaveout = False, t_num_ran_indices=None):
+    """
+        t_data: numpy.ndarray
+            Data array, containing the raw data of an observable. It is assumed,
+            that axis=0 represents the data points of the method and subsequent
+            axis' are assumed to represent multidimensional estimators.
+        t_n: int, default: 1
+            Size of leave n out method.
+        t_random_leaveout: bool, default: False
+            Set to `True` if the leave out subdata sets should be determined with
+            random drawn indices.
+        t_num_ran_indices: int, default: None
+            Defines the number of random indices drawn in the random leave out
+            method. If default is used it is determined to half data size.
+
+        Returns: numpy.ndarray
+            Estimator
+
+        This functions uses the leave n out jackknife method in order to determine
+        the estimator of the data set t_data. Let N be the size of the data set
+        and K be the number of subdata sets. Let
+            Theta = 1/N sum_{n=1}^N x
+        be the estimator on the total data set with data points x and Theta_k the
+        one on the kth subdata set. Then the returned estimator is biased
+        improved by
+            N * Theta - (N-1) * 1/K sum_{k=1}^K Theta_k
+    """
 
     # determine the estimator on the full data set
     global_est = np.average(t_data, axis = 0)
@@ -101,6 +142,31 @@ def jackknife_est(t_data, t_n = 1, t_random_leaveout = False, t_num_ran_indices=
          -(t_data.shape[0]-1) * np.average(np.average(subdata_sets,axis = 1),axis=0)
 
 def jackknife_var(t_data, t_n = 1, t_random_leaveout = False, t_num_ran_indices = None):
+    """
+        t_data: numpy.ndarray
+            Data array, containing the raw data of an observable. It is assumed,
+            that axis=0 represents the data points of the method and subsequent
+            axis' are assumed to represent multidimensional estimators.
+        t_n: int, default: 1
+            Size of leave n out method.
+        t_random_leaveout: bool, default: False
+            Set to `True` if the leave out subdata sets should be determined with
+            random drawn indices.
+        t_num_ran_indices: int, default: None
+            Defines the number of random indices drawn in the random leave out
+            method. If default is used it is determined to half data size.
+
+        Returns: numpy.ndarray
+            variance
+
+        This functions uses the leave n out jackknife method in order to determine
+        the variance of the data set t_data. Let N be the size of the data set and
+        K be the number of subdata sets
+            var = (N-1)/N * sum_{k=1}^K (Theta_k - Theta)^2
+        where Theta_k is the estimator on the kth subdata set and
+            Theta = 1/N sum_{n=1}^N x
+        is the estimator on the total data set with data points x.
+    """
 
     # determine the estimator on the full data set
     global_est = np.average(t_data, axis = 0)
