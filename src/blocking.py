@@ -116,6 +116,31 @@ def blocking_var(t_data, t_num_blocks = 2):
     # for index details see blocking.blocking_data documentation.
     return np.var( np.average(blocked_data, axis = 1), axis = 0 )
 
+def blocking(t_data, t_num_blocks = 2):
+    """
+        t_data: numpy.ndarray
+            Data which becomes blocked and processed. It is assumed that axis = 0
+            represents the different data points in the set and all other axis'
+            account for the dimensionality of the estimator.
+        t_num_blocks: int
+            Number of blocks in which t_data becomes devided
+
+        Returns: numpy.ndarray, numpy.ndarray
+            blocking_est, blocking_var
+            For details see these functions.
+
+        This functions blocks the data in K=t_num_blocks blocks and determines
+        the estimator (numpy.average) on each of these blocks. Then the variance
+        is determined by
+            var = 1/N sum_{k=1}^K (Theta_k - Theta)^2
+        where N is the data size, Theta_k is the estimator on the kth block
+        and
+            Theta = 1/K sum_{k=1}^K Theta_k
+        Theta,var are returned as indicated above
+    """
+    return blocking_est(t_data,t_num_blocks), blocking_var(t_data,t_num_blocks)
+
+
 def var_per_num_blocks(t_data,t_num_blocks_range = None):
     """
         t_data: numpy.ndarray
