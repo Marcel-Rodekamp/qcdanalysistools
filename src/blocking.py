@@ -32,15 +32,42 @@ def blocking_var(t_data, t_num_blocks = 2):
     return np.var( np.average(blocked_data, axis = 1), axis = 0 )
 
 def var_per_num_blocks(t_data,t_num_blocks_range = None):
+    """
+        t_data: numpy.ndarray
+            Data which becomes blocked and processed.
+        t_num_blocks_range: int, list of ints, default: None
+            Determines which number of blocks are used in the process.
+            * int: highest number of blocks, creating list of integers starting
+                   with 2 and step 1
+            * list of ints: each element is taken as a number of blocks
+            * None (default): Creating a list of integers starting with 2 and
+                              step 1.
+        Returns: numpy.ndarray
+            Array corresponding to the variance per block size. Let K be a block
+            size in the list determined by t_num_blocks_range and * denotes the
+            dimensionality of the estimator i.e. t_data.shape[1:], then
+                var[K][*]
+
+        This function blocks the input data in K blocks for every K in the list
+        of number of blocks determined by t_num_blocks_range. Then variance is
+        determined appropriately on the K blocks.
+        The variances per K is returned.
+
+        TODO:
+            * This has not the desired generality
+                * support for other variance estimators i.e. jackknife/bootstrap
+    """
+    # create list of block numbers if not given
     if t_num_blocks_range is None:
         t_num_blocks_range = [i for i in range(2,t_data.shape[0]//2)]
     elif isinstance(t_num_blocks_range,int):
         t_num_blocks_range = [i for i in range(2,t_num_blocks_range)]
 
+    # create empty to store the variances
     var = np.zeros( shape=(len(t_num_blocks_range),*t_data.shape[1:]) )
 
     for num_blocks_id in range(len(t_num_blocks_range)):
-
+        # for each number of blocks compute the blocking variance
         var[num_blocks_id] = blocking_var(t_data = t_data,
                 t_num_blocks = t_num_blocks_range[num_blocks_id])
 
