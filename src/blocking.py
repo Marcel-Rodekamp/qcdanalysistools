@@ -18,6 +18,26 @@ def blocking_data(t_data,t_num_blocks):
     return np.array(subdata_sets)
 
 def blocking_est(t_data, t_num_blocks = 2):
+    """
+        t_data: numpy.ndarray
+            Data which becomes blocked and processed. It is assumed that axis = 0
+            represents the different data points in the set and all other axis'
+            account for the dimensionality of the estimator.
+        t_num_blocks: int
+            Number of blocks in which t_data becomes devided
+
+        Returns: numpy.ndarray
+            Estimator after blocking for each dimension of the estimator. Let
+            d be the total dimension of the estimator, n_i denotes the number
+            of elements in that particular dimension.
+                est.shape = (n_0,n_1,...,n_d) = t_data.shape[1:]
+
+        This functions blocks the data in K=t_num_blocks blocks and determines
+        the estimator (numpy.average) on each of these blocks. Then the average
+        over theses determines the total estimator
+            est = 1/K sum_{k=1}^K Theta_k
+        where Theta_k is the estimator on the kth block.
+    """
     blocked_data = blocking_data(t_data,t_num_blocks=t_num_blocks)
 
     # determine and return the estimator
@@ -27,14 +47,42 @@ def blocking_est(t_data, t_num_blocks = 2):
     return np.average( np.average(blocked_data, axis = 1), axis = 0 )
 
 def blocking_var(t_data, t_num_blocks = 2):
+    """
+        t_data: numpy.ndarray
+            Data which becomes blocked and processed. It is assumed that axis = 0
+            represents the different data points in the set and all other axis'
+            account for the dimensionality of the estimator.
+        t_num_blocks: int
+            Number of blocks in which t_data becomes devided
+
+        Returns: numpy.ndarray
+            Variance after blocking for each dimension of the estimator. Let
+            d be the total dimension of the estimator, n_i denotes the number
+            of elements in that particular dimension.
+                var.shape = (n_0,n_1,...,n_d) = t_data.shape[1:]
+
+        This functions blocks the data in K=t_num_blocks blocks and determines
+        the estimator (numpy.average) on each of these blocks. Then the variance
+        is determined by
+            var = 1/N sum_{k=1}^K (Theta_k - Theta)^2
+        where N is the data size, Theta_k is the estimator on the kth block
+        and
+            Theta = 1/K sum_{k=1}^K Theta_k
+    """
     blocked_data = blocking_data(t_data,t_num_blocks=t_num_blocks)
 
+    # determine and return the variance
+    # The (inner) average, determines the estimator for each block,
+    # Then these estimators are used to determine the variance
+    # for index details see blocking.blocking_data documentation.
     return np.var( np.average(blocked_data, axis = 1), axis = 0 )
 
 def var_per_num_blocks(t_data,t_num_blocks_range = None):
     """
         t_data: numpy.ndarray
-            Data which becomes blocked and processed.
+            Data which becomes blocked and processed. It is assumed that axis = 0
+            represents the different data points in the set and all other axis'
+            account for the dimensionality of the estimator.
         t_num_blocks_range: int, list of ints, default: None
             Determines which number of blocks are used in the process.
             * int: highest number of blocks, creating list of integers starting
