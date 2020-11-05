@@ -10,7 +10,6 @@ def symmetrize(t_correlator):
         sym_correlator[i_ensamble][(Nt-1)//2] = ensamble_ele[(Nt-1)//2]
         for t in range(1, Nt//2-1):
             sym_correlator[i_ensamble][t] =  0.5*( ensamble_ele[t] + ensamble_ele[-1-t] )
-            print( t,(Nt-1)-t )
 
     return sym_correlator
 
