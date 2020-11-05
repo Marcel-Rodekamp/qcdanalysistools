@@ -100,7 +100,6 @@ def bootstrap_var(t_data,t_num_subdata_sets = None,t_obs=np.average,**obs_kwargs
     # 3,4. determine variance
     return np.var(Theta_k, axis = 0)
 
-
 def bootstrap(t_data,t_num_subdata_sets = None, t_obs = np.average, t_blocked = False, t_num_blocks = None, **obs_kwargs):
     r"""
         t_data: numpy.ndarray
@@ -129,17 +128,17 @@ def bootstrap(t_data,t_num_subdata_sets = None, t_obs = np.average, t_blocked = 
         l_var = [None]*t_num_blocks
 
         for block_id in range(0,t_num_blocks):
-            l_est[block_id] = bootstrap_est(blocking.get_block(t_data,block_id,block_size),t_num_leave_outs=t_num_leave_outs,t_obs=t_obs,**obs_kwargs)
-            l_var[block_id] = bootstrap_var(blocking.get_block(t_data,block_id,block_size),t_num_leave_outs=t_num_leave_outs,t_obs=t_obs,**obs_kwargs)
+            l_est[block_id] = bootstrap_est(blocking.get_block(t_data,block_id,block_size),t_num_subdata_sets=t_num_subdata_sets,t_obs=t_obs,**obs_kwargs)
+            l_var[block_id] = bootstrap_var(blocking.get_block(t_data,block_id,block_size),t_num_subdata_sets=t_num_subdata_sets,t_obs=t_obs,**obs_kwargs)
 
-        l_est[t_num_blocks-1] = bootstrap_est(blocking.get_block(t_data,t_num_blocks-1,block_size),t_num_leave_outs=t_num_leave_outs,t_obs=t_obs,**obs_kwargs)
-        l_var[t_num_blocks-1] = bootstrap_var(blocking.get_block(t_data,t_num_blocks-1,block_size),t_num_leave_outs=t_num_leave_outs,t_obs=t_obs,**obs_kwargs)
+        l_est[t_num_blocks-1] = bootstrap_est(blocking.get_block(t_data,t_num_blocks-1,block_size),t_num_subdata_sets=t_num_subdata_sets,t_obs=t_obs,**obs_kwargs)
+        l_var[t_num_blocks-1] = bootstrap_var(blocking.get_block(t_data,t_num_blocks-1,block_size),t_num_subdata_sets=t_num_subdata_sets,t_obs=t_obs,**obs_kwargs)
 
         est = np.average(l_est,axis=0)
         var = np.average(l_var,axis=0)
     else:
         # simple leave n out (randomnized)
-        est = bootstrap_est(t_data,t_num_leave_outs=t_num_leave_outs,t_obs=t_obs,**obs_kwargs)
-        var = bootstrap_var(t_data,t_num_leave_outs=t_num_leave_outs,t_obs=t_obs,**obs_kwargs)
+        est = bootstrap_est(t_data,t_num_subdata_sets=t_num_subdata_sets,t_obs=t_obs,**obs_kwargs)
+        var = bootstrap_var(t_data,t_num_subdata_sets=t_num_subdata_sets,t_obs=t_obs,**obs_kwargs)
 
     return est,var
