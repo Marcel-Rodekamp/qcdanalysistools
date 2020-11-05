@@ -40,4 +40,4 @@ python setup.py install (requires sudo)
 ```
 
 ## Licenses
-This software package is accessible under the MIT Licenses condition without any warranty of producing correct results or being fully functional in any instance.
+This software package is accessible under the MIT license.
