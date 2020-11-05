@@ -1,16 +1,15 @@
-"""
+r"""
     This file contains the
         * leave n out jackknife
         * leave n random out jackknife
     methods.
 """
 import numpy as np
-from numpy import average
 
 def _leave_n_out(t_data, t_n = 1):
-    """
+    r"""
         t_data: numpy.ndarray
-            Data array, containing the raw data of an observable. It is assumed,
+            Data array, containing the raw data. It is assumed,
             that axis=0 represents the data points of the method and subsequent
             axis' are assumed to represent multidimensional estimators.
         t_n: int, default: 1
@@ -38,22 +37,23 @@ def _leave_n_out(t_data, t_n = 1):
                 t_data.shape[1:]
 
     """
+    # initialize tensor over subdata sets
     subdata_sets = np.zeros( shape=( t_data.shape[0]//t_n, t_data.shape[0]-t_n, *t_data.shape[1:] ) )
 
     for k in range(t_data.shape[0]//t_n):
+        # delete t_n from the full data block and store it in the subdata matrix
         subdata_sets[k] = np.delete(
             t_data,
             [ k+i if k+i < t_data.shape[0] else i for i in range(t_n) ],
             axis = 0,
         )
 
-
     return subdata_sets
 
 def _leave_n_out_ran(t_data,t_num_ran_indices,t_n=1):
-    """
+    r"""
         t_data: numpy.ndarray
-            Data array, containing the raw data of an observable. It is assumed,
+            Data array, containing the raw data. It is assumed,
             that axis=0 represents the data points of the method and subsequent
             axis' are assumed to represent multidimensional estimators.
         t_num_ran_indices: int, default: None
@@ -84,11 +84,16 @@ def _leave_n_out_ran(t_data,t_num_ran_indices,t_n=1):
                 t_data.shape[1:]
     """
 
+    # initialize tensor over subdata sets
     subdata_sets = np.zeros( shape=( t_num_ran_indices, t_data.shape[0]-t_n, *t_data.shape[1:] ) )
 
+    # draw indices which should be left out
     leave_out_index_list = np.random.randint(0,high=t_data.shape[0]-1,size=t_num_ran_indices)
 
     for k in range(len(leave_out_index_list)):
+
+        # delete t_n from the full data block started at a random index k and
+        # store it in the subdata matrix
         subdata_sets[k] = np.delete(
             t_data,
             [ leave_out_index_list[k]+i if leave_out_index_list[k]+i < t_data.shape[0] else i for i in range(t_n) ],
@@ -97,12 +102,14 @@ def _leave_n_out_ran(t_data,t_num_ran_indices,t_n=1):
 
     return subdata_sets
 
-def jackknife_est(t_data, t_n = 1, t_random_leaveout = False, t_num_ran_indices=None):
-    """
+def jackknife_est(t_data, t_n = 1, t_obs = np.average, t_random_leaveout = False, t_num_ran_indices=None, **obs_kwargs):
+    r"""
         t_data: numpy.ndarray
-            Data array, containing the raw data of an observable. It is assumed,
+            Data array, containing the raw data. It is assumed,
             that axis=0 represents the data points of the method and subsequent
             axis' are assumed to represent multidimensional estimators.
+        t_obs: function, default: numpy.average
+            Observable which should be computed over t_data.
         t_n: int, default: 1
             Size of leave n out method.
         t_random_leaveout: bool, default: False
@@ -111,42 +118,56 @@ def jackknife_est(t_data, t_n = 1, t_random_leaveout = False, t_num_ran_indices=
         t_num_ran_indices: int, default: None
             Defines the number of random indices drawn in the random leave out
             method. If default is used it is determined to half data size.
+        **obs_kwargs: keyworded arguments
+            Keyworded arguments passed to t_obs
 
         Returns: numpy.ndarray
             Estimator
 
         This functions uses the leave n out jackknife method in order to determine
-        the estimator of the data set t_data. Let N be the size of the data set
-        and K be the number of subdata sets. Let
-            Theta = 1/N sum_{n=1}^N x
-        be the estimator on the total data set with data points x and Theta_k the
-        one on the kth subdata set. Then the returned estimator is biased
-        improved by
-            N * Theta - (N-1) * 1/K sum_{k=1}^K Theta_k
+        the estimator of the observable determined over t_data.
+        Let $N$ be the size of the data set and $K = \frac{N}{t_n}$ be the number
+        of subdata sets. Let $X = {x_i}_{i\in[N]}$ denote the total data set
+            1. Compute Observable on Dataset          --> $\hat{\Theta}=\Theta(X)$
+            2. On data X perform a leave n out method --> ${X_k}_{k\in[0,K-1]}$
+            3. Compute observable on each subdata set --> $\Theta_k=\Theta(X_k)$
+            4. Compute biased estimator               --> $\tilde{\Theta} = \frac{1}{K} \sum_{k\in[0,K-1]} \Theta_k$
+            5. Compute biasimproved estimator         --> $\Theta_{est} = \hat{\Theta} - (K-1) (\tilde{\Theta} - \hat{\Theta})$
+            6. Return $\Theta_{est}$
     """
+    # 1. determine the estimator on the full data set
+    Theta_hat = t_obs(t_data,**obs_kwargs)
 
-    # determine the estimator on the full data set
-    global_est = np.average(t_data, axis = 0)
-
-    # create leave n out data sets
+    # 2. create leave n out data sets
     if t_random_leaveout:
         t_num_ran_indices = t_data.shape[0]//2 if t_num_ran_indices is None else t_num_ran_indices
-        subdata_sets = _leave_n_out_ran(t_data,t_num_ran_indices=t_num_ran_indices, t_n = t_n)
+        subdata_sets = _leave_n_out_ran(t_data,t_num_ran_indices=t_num_ran_indices, t_n = t_n,)
     else:
         subdata_sets = _leave_n_out(t_data, t_n = t_n)
+
+    K = subdata_sets.shape[0]
+
+    # 3. Compute observables
+    Theta_k = np.zeros( shape = (K,*t_data.shape[1:]) )
+    for k,x_k in enumerate(subdata_sets):
+        Theta_k[k] = t_obs(x_k,**obs_kwargs)
+
+    # 4.
+    Theta_tilde = np.average(Theta_k,axis=0)
 
     # determine and return the bias reduced estimator
     # the first (inner) average, averages in each block, the second (outer) does
     # over the subdata sets, for index details see _leave_n_out(_ran) documentation.
-    return t_data.shape[0] * global_est \
-         -(t_data.shape[0]-1) * np.average(np.average(subdata_sets,axis = 1),axis=0)
+    return K * Theta_hat -(K-1) * Theta_tilde
 
-def jackknife_var(t_data, t_n = 1, t_random_leaveout = False, t_num_ran_indices = None):
-    """
+def jackknife_var(t_data, t_obs = np.average, t_n = 1, t_random_leaveout = False, t_num_ran_indices = None,**obs_kwargs):
+    r"""
         t_data: numpy.ndarray
-            Data array, containing the raw data of an observable. It is assumed,
+            Data array, containing the raw data. It is assumed,
             that axis=0 represents the data points of the method and subsequent
             axis' are assumed to represent multidimensional estimators.
+        t_obs: function, default: numpy.average
+            Observable which should be computed over t_data.
         t_n: int, default: 1
             Size of leave n out method.
         t_random_leaveout: bool, default: False
@@ -155,41 +176,51 @@ def jackknife_var(t_data, t_n = 1, t_random_leaveout = False, t_num_ran_indices 
         t_num_ran_indices: int, default: None
             Defines the number of random indices drawn in the random leave out
             method. If default is used it is determined to half data size.
+        **obs_kwargs: keyworded arguments
+            Keyworded arguments passed to t_obs
 
         Returns: numpy.ndarray
-            variance
+            Estimator
 
         This functions uses the leave n out jackknife method in order to determine
-        the variance of the data set t_data. Let N be the size of the data set and
-        K be the number of subdata sets
-            var = (N-1)/N * sum_{k=1}^K (Theta_k - Theta)^2
-        where Theta_k is the estimator on the kth subdata set and
-            Theta = 1/N sum_{n=1}^N x
-        is the estimator on the total data set with data points x.
+        the estimator of the observable determined over t_data.
+        Let $N$ be the size of the data set and $K = \frac{N}{t_n}$ be the number
+        of subdata sets. Let $X = {x_i}_{i\in[N]}$ denote the total data set
+            1. Compute Observable on Dataset          --> $\hat{\Theta}=\Theta(X)$
+            2. On data X perform a leave n out method --> ${X_k}_{k\in[0,K-1]}$
+            3. Compute observable on each subdata set --> $\Theta_k=\Theta(X_k)$
+            4. Compute variance                       --> $\sigma^2 = \frac{K-1}{K} \sum_{k\in[0,K-1]} \left( \Theta_k - \hat{\Theta} \right)^2$
+            6. Return $\sigma^2$
     """
 
-    # determine the estimator on the full data set
-    global_est = np.average(t_data, axis = 0)
+    # 1. determine the estimator on the full data set
+    Theta_hat = t_obs(t_data, **obs_kwargs)
 
-    # create leave n out data sets
+    # 2. create leave n out data sets
     if t_random_leaveout:
         t_num_ran_indices = t_data.shape[0]//2 if t_num_ran_indices is None else t_num_ran_indices
         subdata_sets = _leave_n_out_ran(t_data,t_num_ran_indices=t_num_ran_indices, t_n = t_n)
     else:
         subdata_sets = _leave_n_out(t_data, t_n = t_n)
 
-    # determine estimator on each subdata set
-    est = np.average(subdata_sets, axis=0)
+    K = subdata_sets.shape[0]
+
+    # 3. Compute observables
+    Theta_k = np.zeros( shape = (K,*t_data.shape[1:]) )
+    for k,x_k in enumerate(subdata_sets):
+        Theta_k[k] = t_obs(x_k,**obs_kwargs)
 
     # determine variance
-    return ((t_data.shape[0]-1)/t_data.shape[0]) * np.sum( np.square(est-global_est), axis = 0 )
+    return ((K-1)/K) * np.sum( np.square(Theta_k-Theta_hat), axis = 0 )
 
-def jackknife(t_data, t_n = 1, t_random_leaveout = False, t_num_ran_indices=None, t_blocked = False, t_num_blocks = None):
-    """
+def jackknife(t_data, t_obs = np.average, t_n = 1,  t_random_leaveout = False, t_num_ran_indices=None, t_blocked = False, t_num_blocks = None,**obs_kwargs):
+    r"""
         t_data: numpy.ndarray
             Data array, containing the raw data of an observable. It is assumed,
             that axis=0 represents the data points of the method and subsequent
             axis' are assumed to represent multidimensional estimators.
+        t_obs: function, default: numpy.average
+            Observable which should be computed over t_data
         t_n: int, default: 1
             Size of leave n out method.
         t_random_leaveout: bool, default: False
