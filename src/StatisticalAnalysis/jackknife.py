@@ -257,17 +257,17 @@ def jackknife(t_data, t_obs = np.average, t_n = 1,  t_random_leaveout = False, t
         l_var = [None]*t_num_blocks
 
         for block_id in range(0,t_num_blocks):
-            l_est[block_id] = jackknife_est(blocking.get_block(t_data,block_id,block_size), t_n = t_n, t_random_leaveout = t_random_leaveout, t_num_ran_indices = t_num_ran_indices)
-            l_var[block_id] = jackknife_var(blocking.get_block(t_data,block_id,block_size), t_n = t_n, t_random_leaveout = t_random_leaveout, t_num_ran_indices = t_num_ran_indices)
+            l_est[block_id] = jackknife_est(blocking.get_block(t_data,block_id,block_size), t_obs=t_obs, t_n = t_n, t_random_leaveout = t_random_leaveout, t_num_ran_indices = t_num_ran_indices,**obs_kwargs)
+            l_var[block_id] = jackknife_var(blocking.get_block(t_data,block_id,block_size), t_obs=t_obs, t_n = t_n, t_random_leaveout = t_random_leaveout, t_num_ran_indices = t_num_ran_indices,**obs_kwargs)
 
-        l_est[t_num_blocks-1] = jackknife_est(blocking.get_block(t_data,t_num_blocks-1,block_size,t_is_end=True), t_n = t_n, t_random_leaveout = t_random_leaveout, t_num_ran_indices = t_num_ran_indices)
-        l_var[t_num_blocks-1] = jackknife_var(blocking.get_block(t_data,t_num_blocks-1,block_size,t_is_end=True), t_n = t_n, t_random_leaveout = t_random_leaveout, t_num_ran_indices = t_num_ran_indices)
+        l_est[t_num_blocks-1] = jackknife_est(blocking.get_block(t_data,t_num_blocks-1,block_size,t_is_end=True),t_obs=t_obs, t_n = t_n, t_random_leaveout = t_random_leaveout, t_num_ran_indices = t_num_ran_indices,**obs_kwargs)
+        l_var[t_num_blocks-1] = jackknife_var(blocking.get_block(t_data,t_num_blocks-1,block_size,t_is_end=True),t_obs=t_obs, t_n = t_n, t_random_leaveout = t_random_leaveout, t_num_ran_indices = t_num_ran_indices,**obs_kwargs)
 
         est = np.average(l_est,axis=0)
         var = np.average(l_var,axis=0)
     else:
         # simple leave n out (randomnized)
-        est = jackknife_est(t_data, t_n = t_n, t_random_leaveout = t_random_leaveout, t_num_ran_indices = t_num_ran_indices)
-        var = jackknife_var(t_data, t_n = t_n, t_random_leaveout = t_random_leaveout, t_num_ran_indices = t_num_ran_indices)
+        est = jackknife_est(t_data, t_obs=t_obs, t_n = t_n, t_random_leaveout = t_random_leaveout, t_num_ran_indices = t_num_ran_indices,**obs_kwargs)
+        var = jackknife_var(t_data, t_obs=t_obs, t_n = t_n, t_random_leaveout = t_random_leaveout, t_num_ran_indices = t_num_ran_indices,**obs_kwargs)
 
     return est,var
