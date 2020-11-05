@@ -2,14 +2,16 @@ import numpy as np
 from scipy.optimize import fsolve
 
 def symmetrize(t_correlator):
-    sym_correlator = np.zeros(t_correlator.shape[0]//2)
-    Nt = t_correlator.shape[0]
-    for t in range(t_correlator.shape[0]//2):
-        sym_correlator[t] =  0.5*( t_correlator[t] + t_correlator[Nt-1-t] )
+    sym_correlator = np.zeros(shape = (t_correlator.shape[0],t_correlator.shape[1]//2))
+    Nt = t_correlator.shape[1]
+
+    for i_ensamble, ensamble_ele in enumerate(t_correlator):
+        for t in range(Nt//2):
+            sym_correlator[i_ensamble][t] =  0.5*( ensamble_ele[t] + ensamble_ele[Nt-1-t] )
 
     return sym_correlator
 
-def effective_mass_solver(t_t,t_sym_correlator,t_initial_guess):
+def effective_mass_solver(t_t,t_sym_correlator,t_initial_guess,Nt_half=24):
     r"""!
         t: int
             Time slice point at which m_eff is computed
@@ -24,13 +26,32 @@ def effective_mass_solver(t_t,t_sym_correlator,t_initial_guess):
         $$
         for the effective mass at a given time slice point t.
     """
-    upper_index = t_t+1 if t_t+1 < t_sym_correlator.size else 0
+    upper_index = t_t+1 if t_t+1 < Nt_half else 0
 
-    # Equation to solve for effective_mass as lambda function
-    effective_mass_func_cosh = lambda m_eff: \
-        t_sym_correlator[t_t]/t_sym_correlator[upper_index]-np.cosh(m_eff*(t_t-t_sym_correlator.size))/np.cosh(m_eff*(t_t+1-t_sym_correlator.size))
+    m_eff = np.zeros(shape=(t_sym_correlator.shape[0]))
 
-    return fsolve(effective_mass_func_cosh,t_initial_guess)
+    # TODO: parallelize this loop.
+    for i_ens in range(t_sym_correlator.shape[0]):
+        m_eff_fct = lambda m_eff: t_sym_correlator[i_ens][t_t]/t_sym_correlator[i_ens][upper_index]-np.cosh(m_eff*(t_t-Nt_half))/np.cosh(m_eff*(t_t+1-Nt_half))
+
+        m_eff[i_ens] = fsolve(m_eff_fct,t_initial_guess)
+
+    return m_eff
+
+def effective_mass_obs(t_symmetrized_correlator,t_initial_guess):
+    r"""
+        t_sym_correlator: numpy.ndarray
+            Correlator data symmetrized in the shape = (#configs,Nt)
+        This function is ment to act as an observable passt to the jackknife,bootstrap
+        or blocking
+    """
+
+    effective_mass = np.zeros(shape=(t_symmetrized_correlator.shape[1]))
+
+    for t in range(t_symmetrized_correlator.shape[1]):
+        effective_mass[t] = np.average(effective_mass_solver(t,t_symmetrized_correlator,t_initial_guess))
+
+    return effective_mass
 
 def effective_mass(t_correlator,t_initial_guess, t_analysis_type, **analysis_kwargs):
     r"""
@@ -76,41 +97,30 @@ def effective_mass(t_correlator,t_initial_guess, t_analysis_type, **analysis_kwa
             * qcdanalysistools (if Jackknife,Bootstrap and/or blocking)
             * scipy.optimize.fsolve
     """
-    # project to the real part
-    if np.iscomplex(t_correlator).any():
-        t_correlator = t_correlator.real
-
-    # effective masses for each config
-    effective_mass = np.zeros(shape=(t_correlator.shape[0],t_correlator.shape[1]//2))
-
-    # compute the effective mass on each configuration
-    for conf_index in range(t_correlator.shape[0]):
-        # symmetrize correlator only for this configuration
-        sym_correlator = symmetrize(t_correlator[conf_index])
-
-        # Solve for the effective mass in each time slice
-        # Only use halfe of the time slices as the correlator is assumed to be periodic
-        for t in range(t_correlator.shape[1]//2):
-
-            # solve the abouve equation
-            effective_mass[conf_index][t] = effective_mass_solver(t,sym_correlator,t_initial_guess)
 
     if t_analysis_type == "Plain":
         analysis = lambda data: ( np.average(data, axis=0),np.var(data,axis=0) )
     elif t_analysis_type == "Jackknife":
         from qcdanalysistools.analysis import jackknife
-        analysis = lambda data: jackknife(data,**analysis_kwargs)
+        analysis = lambda data: jackknife(data,**analysis_kwargs,t_obs=effective_mass_obs,t_initial_guess=t_initial_guess)
     elif t_analysis_type == "Bootstrap":
         from qcdanalysistools.analysis import bootstrap
-        analysis = lambda data: bootstrap(data,**analysis_kwargs)
+        analysis = lambda data: bootstrap(data,**analysis_kwargs,t_obs=effective_mass_obs,t_initial_guess=t_initial_guess)
     elif t_analysis_type == "Blocking":
         from qcdanalysistools.analysis import blocking
-        analysis = lambda data: blocking(data,**analysis_kwargs)
+        analysis = lambda data: blocking(data,**analysis_kwargs,t_obs=effective_mass_obs,t_initial_guess=t_initial_guess)
         pass
     else:
         print("## Warning: t_analysis_type =",t_analysis_type, "is not implemented, falling back to `Plain`")
         analysis = lambda data: ( np.average(data, axis=0),np.var(data,axis=0) )
 
-    est, var = analysis(effective_mass)
+    # project to the real part
+    print("Projected to Real")
+    t_correlator = t_correlator.real
+
+    # symmetrize the correlator of each element in the ensamble
+    sym_correlator = symmetrize(t_correlator)
+
+    est, var = analysis(sym_correlator)
 
     return est,var
