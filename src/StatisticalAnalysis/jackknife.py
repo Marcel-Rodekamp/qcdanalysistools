@@ -180,7 +180,7 @@ def jackknife_var(t_data, t_obs = np.average, t_n = 1, t_random_leaveout = False
             Keyworded arguments passed to t_obs
 
         Returns: numpy.ndarray
-            Estimator
+            Variance
 
         This functions uses the leave n out jackknife method in order to determine
         the estimator of the observable determined over t_data.
