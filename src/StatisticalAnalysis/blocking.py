@@ -3,9 +3,9 @@ import numpy as np
 def get_block(t_data,t_block_id,t_block_size,t_is_end=False):
     """
         t_data: numpy.ndarray
-            Data which becomes sliced. It is assumed that axis = 0
-            represents the different data points in the set and all other axis'
-            account for the dimensionality of the estimator.
+            Data array, containing the raw data. It is assumed,
+            that axis=0 represents the data points of the method and subsequent
+            axis' are assumed to represent multidimensional estimators.
         t_block_id: int
             The number of the block which should be returned.
         t_block_size: int
@@ -31,9 +31,9 @@ def get_block(t_data,t_block_id,t_block_size,t_is_end=False):
 def blocking_data(t_data,t_num_blocks):
     """
         t_data: numpy.ndarray
-            Data which becomes blocked. It is assumed that axis = 0
-            represents the different data points in the set and all other axis'
-            account for the dimensionality of the estimator.
+            Data array, containing the raw data. It is assumed,
+            that axis=0 represents the data points of the method and subsequent
+            axis' are assumed to represent multidimensional estimators.
         t_num_blocks: int
             Number of blocks in which t_data becomes devided
 
@@ -56,190 +56,83 @@ def blocking_data(t_data,t_num_blocks):
 
     return np.array(subdata_sets)
 
-def blocking_est(t_data, t_num_blocks = 2):
-    """
+def blocking_est(t_data, t_obs = np.average, t_num_blocks = 2,**obs_kwargs):
+    r"""
         t_data: numpy.ndarray
             Data which becomes blocked and processed. It is assumed that axis = 0
             represents the different data points in the set and all other axis'
             account for the dimensionality of the estimator.
         t_num_blocks: int
             Number of blocks in which t_data becomes devided
-
+        t_obs: function, default: numpy.average
+            Observable which should be computed over t_data.
         Returns: numpy.ndarray
-            Estimator after blocking for each dimension of the estimator. Let
-            d be the total dimension of the estimator, n_i denotes the number
-            of elements in that particular dimension.
-                est.shape = (n_1,n_2,...,n_d) = t_data.shape[1:]
+            Estimator
+        This function computes the estimator on the given t_data by blocking the
+        data first and then averaing over all blocks.
+        Let $N$ be the data size and $K$ be the number of blocks
+            1. Block the dataset                          --> ${X_k}_{k\in[0,K-1]}$
+            2. Compute the observable on each subdata set --> $\Theta_k = \Theta(X_k)$
+            3. Compute the Estimator                      --> $\tilde{\Theta} = \frac{1}{K} \sum_{k\in[0,K-1]} \Theta_k$
+            4. Return the Testimator
 
-        This functions blocks the data in K=t_num_blocks blocks and determines
-        the estimator (numpy.average) on each of these blocks. Then the average
-        over theses determines the total estimator
-            est = 1/K sum_{k=1}^K Theta_k
-        where Theta_k is the estimator on the kth block.
     """
+    # 1. get blocked data
     blocked_data = blocking_data(t_data,t_num_blocks=t_num_blocks)
 
-    # determine and return the estimator
-    # the first (inner) average, averages in each block, the second (outer) does
-    # over the subdata sets, for index details see blocking.blocking_data
-    # documentation.
-    return np.average( np.average(blocked_data, axis = 1), axis = 0 )
+    # 2. Compute observables
+    Theta_k = np.zeros( shape = (t_num_blocks,*t_data.shape[1:]) )
+    for k,x_k in enumerate(blocked_data):
+        Theta_k[k] = t_obs(x_k,**obs_kwargs)
 
-def blocking_var(t_data, t_num_blocks = 2):
-    """
+    # 3. Compute estimator
+    return np.average( Theta_k, axis = 0 )
+
+def blocking_var(t_data, t_obs = np.average, t_num_blocks = 2,**obs_kwargs):
+    r"""
         t_data: numpy.ndarray
             Data which becomes blocked and processed. It is assumed that axis = 0
             represents the different data points in the set and all other axis'
             account for the dimensionality of the estimator.
         t_num_blocks: int
             Number of blocks in which t_data becomes devided
-
+        t_obs: function, default: numpy.average
+            Observable which should be computed over t_data.
         Returns: numpy.ndarray
-            Variance after blocking for each dimension of the estimator. Let
-            d be the total dimension of the estimator, n_i denotes the number
-            of elements in that particular dimension.
-                var.shape = (n_1,n_2,...,n_d) = t_data.shape[1:]
+            Variance
+        This function computes the estimator on the given t_data by blocking the
+        data first and then averaing over all blocks.
+        Let $N$ be the data size and $K$ be the number of blocks
+            1. Block the dataset                          --> ${X_k}_{k\in[0,K-1]}$
+            2. Compute the observable on each subdata set --> $\Theta_k = \Theta(X_k)$
+            3. Compute the estimator                      --> $\tilde{\Theta} = \frac{1}{K} \sum_{k\in[0,K-1]} \Theta_k$
+            4. Compute the variance                       --> $\sigma^2 = \frac{1}{K} \sum_{k\in[0,K-1]} \left(\Theta_k - \tilde{\Theta}\right)^2$
+            5. Return the variance
 
-        This functions blocks the data in K=t_num_blocks blocks and determines
-        the estimator (numpy.average) on each of these blocks. Then the variance
-        is determined by
-            var = 1/N sum_{k=1}^K (Theta_k - Theta)^2
-        where N is the data size, Theta_k is the estimator on the kth block
-        and
-            Theta = 1/K sum_{k=1}^K Theta_k
     """
+    # 1. get blocked data
     blocked_data = blocking_data(t_data,t_num_blocks=t_num_blocks)
 
-    # determine and return the variance
-    # The (inner) average, determines the estimator for each block,
-    # Then these estimators are used to determine the variance
-    # for index details see blocking.blocking_data documentation.
-    return np.var( np.average(blocked_data, axis = 1), axis = 0 )
+    # 2. Compute observables
+    Theta_k = np.zeros( shape = (t_num_blocks,*t_data.shape[1:]) )
+    for k,x_k in enumerate(blocked_data):
+        Theta_k[k] = t_obs(x_k,**obs_kwargs)
 
-def blocking(t_data, t_num_blocks = 2):
-    """
+    # 3,4. Compute estimator
+    return np.var( Theta_k, axis = 0 )
+
+def blocking(t_data, t_obs = np.average, t_num_blocks = 2,**obs_kwargs):
+    r"""
         t_data: numpy.ndarray
             Data which becomes blocked and processed. It is assumed that axis = 0
             represents the different data points in the set and all other axis'
             account for the dimensionality of the estimator.
         t_num_blocks: int
             Number of blocks in which t_data becomes devided
-
-        Returns: numpy.ndarray, numpy.ndarray
-            blocking_est, blocking_var
-            For details see these functions.
-
-        This functions blocks the data in K=t_num_blocks blocks and determines
-        the estimator (numpy.average) on each of these blocks. Then the variance
-        is determined by
-            var = 1/N sum_{k=1}^K (Theta_k - Theta)^2
-        where N is the data size, Theta_k is the estimator on the kth block
-        and
-            Theta = 1/K sum_{k=1}^K Theta_k
-        Theta,var are returned as indicated above
-    """
-    return blocking_est(t_data,t_num_blocks), blocking_var(t_data,t_num_blocks)
-
-
-def var_per_num_blocks(t_data,t_num_blocks_range = None):
-    """
-        t_data: numpy.ndarray
-            Data which becomes blocked and processed. It is assumed that axis = 0
-            represents the different data points in the set and all other axis'
-            account for the dimensionality of the estimator.
-        t_num_blocks_range: int, list of ints, default: None
-            Determines which number of blocks are used in the process.
-            * int: highest number of blocks, creating list of integers starting
-                   with 2 and step 1
-            * list of ints: each element is taken as a number of blocks
-            * None (default): Creating a list of integers starting with 2 and
-                              step 1.
+        t_obs: function, default: numpy.average
+            Observable which should be computed over t_data.
         Returns: numpy.ndarray
-            Array corresponding to the variance per block size. Let K be a block
-            size in the list determined by t_num_blocks_range and * denotes the
-            dimensionality of the estimator i.e. t_data.shape[1:], then
-                var[K][*]
-
-        This function blocks the input data in K blocks for every K in the list
-        of number of blocks determined by t_num_blocks_range. Then variance is
-        determined appropriately on the K blocks.
-        The variances per K is returned.
-
-        TODO:
-            * This has not the desired generality
-                * support for other variance estimators i.e. jackknife/bootstrap
+            Estimator, Variance
     """
-    # create list of block numbers if not given
-    if t_num_blocks_range is None:
-        t_num_blocks_range = [i for i in range(2,t_data.shape[0]//2)]
-    elif isinstance(t_num_blocks_range,int):
-        t_num_blocks_range = [i for i in range(2,t_num_blocks_range)]
-
-    # create empty to store the variances
-    var = np.zeros( shape=(len(t_num_blocks_range),*t_data.shape[1:]) )
-
-    for num_blocks_id in range(len(t_num_blocks_range)):
-        # for each number of blocks compute the blocking variance
-        var[num_blocks_id] = blocking_var(t_data = t_data,
-                t_num_blocks = t_num_blocks_range[num_blocks_id])
-
-    return var
-
-def plot_var_per_num_blocks(t_data, t_num_blocks_range = None):
-    """
-        t_data: numpy.array
-            Data to be processed by the blocking method
-        t_num_blocks_range: int, list of ints, default: None
-            Determines which number of blocks are used in the process.
-            * int: highest number of blocks, creating list of integers starting
-                   with 2 and step 1
-            * list of ints: each element is taken as a number of blocks
-            * None (default): Creating a list of integers starting with 2 and
-                              step 1.
-
-        This function blocks the data with several number of blocks and for each
-        the variance of the data is computed.
-        The set of variances, created in this way, is then plotted and fitted with
-        the A/#NumBlocks ansatz.
-        The plot is not automatically saved rather only shown.
-
-        Requirements:
-            * matplotlib.pyplot
-            * lmfit
-
-        TODO:
-            * This has not yet the desired generality
-                * support for multidimensional estimators
-                * support for non standart variances i.e. bootstrap/jackknife
-    """
-    import matplotlib.pyplot as plt
-    import lmfit
-
-    # create list of block numbers if not given
-    if t_num_blocks_range is None:
-        t_num_blocks_range = [i for i in range(2,t_data.shape[0]//2)]
-    elif isinstance(t_num_blocks_range,int):
-        t_num_blocks_range = [i for i in range(2,t_num_blocks_range)]
-
-    # get the variances for the different block numbers
-    vars = var_per_num_blocks(t_data,
-            t_num_blocks_range = t_num_blocks_range)
-
-    # fit the variances with A/#blockNumber
-    model = lmfit.Model(lambda x,A: A/x, param_names=['A'],name="A/x")
-    fit_result = model.fit(vars,x=t_num_blocks_range,A=1)
-    print(fit_result.fit_report())
-
-    # plot the data and the fit
-    plt.plot(t_num_blocks_range, vars,'x',
-             label="Variance(#Blocks)")
-    plt.plot(t_num_blocks_range, fit_result.best_fit,
-             label="{0:.1e}/#Blocks: best fit".format(fit_result.params['A'].value))
-    plt.xticks(t_num_blocks_range)
-    plt.grid()
-    plt.xlabel("#Blocks")
-    plt.ylabel("Var(#Blocks)")
-    plt.legend()
-    plt.show()
-    # clear the plot so that other functions might not be disturbed
-    plt.clf()
+    return blocking_est(t_data,t_obs=t_obs,t_num_blocks=t_num_blocks,**obs_kwargs),\
+           blocking_var(t_data,t_obs=t_obs,t_num_blocks=t_num_blocks,**obs_kwargs)
