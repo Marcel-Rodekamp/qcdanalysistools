@@ -8,9 +8,14 @@ setup(
     author = "Marcel Rodekamp",
     author_email = "marcel.rodekamp@gmail.com",
     package_dir = {
-        "qcdanalysistools": "src/"},
+        "qcdanalysistools": "src/",
+        "qcdanalysistools.analysis": "src/StatisticalAnalysis",
+        "qcdanalysistools.observables": "src/Observables"
+    },
     packages = [
-        "qcdanalysistools"
+        "qcdanalysistools",
+        "qcdanalysistools.analysis",
+        "qcdanalysistools.observables",
     ],
 #    scripts=[],
 )
