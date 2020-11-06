@@ -10,12 +10,14 @@ setup(
     package_dir = {
         "qcdanalysistools": "src/",
         "qcdanalysistools.analysis": "src/StatisticalAnalysis",
-        "qcdanalysistools.observables": "src/Observables"
+        "qcdanalysistools.observables": "src/Observables",
+        "qcdanalysistools.stats": "src/Stats",
     },
     packages = [
         "qcdanalysistools",
         "qcdanalysistools.analysis",
         "qcdanalysistools.observables",
+        "qcdanalysistools.stats",
     ],
 #    scripts=[],
 )
