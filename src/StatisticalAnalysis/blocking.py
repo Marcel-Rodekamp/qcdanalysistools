@@ -81,12 +81,12 @@ def blocking_est(t_data, t_obs = np.average, t_num_blocks = 2,**obs_kwargs):
     blocked_data = blocking_data(t_data,t_num_blocks=t_num_blocks)
 
     # 2. Compute observables
-    Theta_k = np.zeros( shape = (t_num_blocks,*t_data.shape[1:]) )
+    Theta_k = [None]*t_num_blocks
     for k,x_k in enumerate(blocked_data):
         Theta_k[k] = t_obs(x_k,**obs_kwargs)
 
     # 3. Compute estimator
-    return np.average( Theta_k, axis = 0 )
+    return np.average( np.array(Theta_k), axis = 0 )
 
 def blocking_var(t_data, t_obs = np.average, t_num_blocks = 2,**obs_kwargs):
     r"""
@@ -114,12 +114,12 @@ def blocking_var(t_data, t_obs = np.average, t_num_blocks = 2,**obs_kwargs):
     blocked_data = blocking_data(t_data,t_num_blocks=t_num_blocks)
 
     # 2. Compute observables
-    Theta_k = np.zeros( shape = (t_num_blocks,*t_data.shape[1:]) )
+    Theta_k = [None]*t_num_blocks
     for k,x_k in enumerate(blocked_data):
         Theta_k[k] = t_obs(x_k,**obs_kwargs)
 
     # 3,4. Compute estimator
-    return np.var( Theta_k, axis = 0 )
+    return np.var( np.array(Theta_k), axis = 0 )
 
 def blocking(t_data, t_obs = np.average, t_num_blocks = 2,**obs_kwargs):
     r"""

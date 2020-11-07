@@ -148,12 +148,12 @@ def jackknife_est(t_data, t_n = 1, t_obs = np.average, t_random_leaveout = False
     K = subdata_sets.shape[0]
 
     # 3. Compute observables
-    Theta_k = np.zeros( shape = (K,*t_data.shape[1:]) )
+    Theta_k = [None]*K
     for k,x_k in enumerate(subdata_sets):
         Theta_k[k] = t_obs(x_k,**obs_kwargs)
 
     # 4.
-    Theta_tilde = np.average(Theta_k,axis=0)
+    Theta_tilde = np.average(np.array(Theta_k),axis=0)
 
     # determine and return the bias reduced estimator
     # the first (inner) average, averages in each block, the second (outer) does
@@ -206,12 +206,12 @@ def jackknife_var(t_data, t_obs = np.average, t_n = 1, t_random_leaveout = False
     K = subdata_sets.shape[0]
 
     # 3. Compute observables
-    Theta_k = np.zeros( shape = (K,*t_data.shape[1:]) )
+    Theta_k = [None]*K
     for k,x_k in enumerate(subdata_sets):
         Theta_k[k] = t_obs(x_k,**obs_kwargs)
 
     # determine variance
-    return ((K-1)/K) * np.sum( np.square(Theta_k-Theta_hat), axis = 0 )
+    return ((K-1)/K) * np.sum( np.square(np.array(Theta_k)-Theta_hat), axis = 0 )
 
 def jackknife(t_data, t_obs = np.average, t_n = 1,  t_random_leaveout = False, t_num_ran_indices=None, t_blocked = False, t_num_blocks = None,**obs_kwargs):
     r"""

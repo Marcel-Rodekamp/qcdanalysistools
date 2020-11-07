@@ -55,12 +55,12 @@ def bootstrap_est(t_data,t_num_subdata_sets = None,t_obs=np.average,**obs_kwargs
     subdata_sets = _leave_out(t_data,t_num_subdata_sets=t_num_subdata_sets)
 
     # 2. Compute observables
-    Theta_k = np.zeros( shape = (t_num_subdata_sets,*t_data.shape[1:]) )
+    Theta_k = [None]*t_num_subdata_sets
     for k,x_k in enumerate(subdata_sets):
         Theta_k[k] = t_obs(x_k,**obs_kwargs)
 
     # 3. determine estimator
-    return np.average(Theta_k, axis = 0)
+    return np.average(np.array(Theta_k), axis = 0)
 
 def bootstrap_var(t_data,t_num_subdata_sets = None,t_obs=np.average,**obs_kwargs):
     r"""
@@ -93,12 +93,12 @@ def bootstrap_var(t_data,t_num_subdata_sets = None,t_obs=np.average,**obs_kwargs
     subdata_sets = _leave_out(t_data,t_num_subdata_sets=t_num_subdata_sets)
 
     # 2. Compute observables
-    Theta_k = np.zeros( shape = (t_num_subdata_sets,*t_data.shape[1:]) )
+    Theta_k = [None]*t_num_subdata_sets
     for k,x_k in enumerate(subdata_sets):
         Theta_k[k] = t_obs(x_k,**obs_kwargs)
 
     # 3,4. determine variance
-    return np.var(Theta_k, axis = 0)
+    return np.var(np.array(Theta_k), axis = 0)
 
 def bootstrap(t_data,t_num_subdata_sets = None, t_obs = np.average, t_blocked = False, t_num_blocks = None, **obs_kwargs):
     r"""
