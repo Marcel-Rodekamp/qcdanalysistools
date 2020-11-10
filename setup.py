@@ -12,12 +12,14 @@ setup(
         "qcdanalysistools.analysis": "src/StatisticalAnalysis",
         "qcdanalysistools.observables": "src/Observables",
         "qcdanalysistools.stats": "src/Stats",
+        "qcdanalysistools.fitting": "src/Fitting",
     },
     packages = [
         "qcdanalysistools",
         "qcdanalysistools.analysis",
         "qcdanalysistools.observables",
         "qcdanalysistools.stats",
+        "qcdanalysistools.fitting",
     ],
 #    scripts=[],
 )
