@@ -72,6 +72,10 @@ class FitBase():
         # Store the argument of the model e.g. time axis.
         self.xdata = t_xdata
 
+        # if the data shapes do not mathc the expectation raise ValueError
+        if t_ydata.shape[1] != t_xdata.shape[0]:
+            raise ValueError(f"Axis 1 of t_ydata ({t_ydata.shape[1]}) must have same length as axis 0 of t_xdata ({t_xdata.shape[0]}).")
+
         # optional arguments which are passed to the scipy.optimize.minimization
         # method. For documentation please refer to
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
