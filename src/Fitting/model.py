@@ -65,3 +65,24 @@ class MonomialModel(ModelBase):
             Implements the jacobian of the model in respect to the parameters
         """
         return np.array( [ pow(t_x,self.order) ] )
+
+class FirstEnergyCoshModel(ModelBase):
+    def __init__(self,t_A0,t_E0,t_Nt):
+        r"""
+            t_A0: float
+                Initial guess of the scaling parameter
+            t_E0: float
+                Initial guess of energy parameter
+            t_Nt: int
+                Temporal extend
+        """
+        super().__init__(t_num_params = 2, t_Theta0 = (t_A0,t_E0,))
+        self.Nt_half = t_Nt/2
+
+    def apply(self,t_x,t_A,t_E):
+        self.Theta = (t_A,t_E)
+        return t_A*np.cosh((t_x-self.Nt_half)*t_E)
+
+    def jac_param(self,t_x):
+        arg = (t_x-self.Nt_half)
+        return np.array( [ np.cosh(arg*self.Theta[1]), arg*self.Theta[0]*np.sinh(arg*self.Theta[1])] )
