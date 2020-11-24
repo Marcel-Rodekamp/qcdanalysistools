@@ -90,9 +90,7 @@ def subdataset(t_data, t_k, t_params):
     if t_params.random_leaveout:
         return np.delete(t_data,[t_params.leave_out_index_list[t_k]+i if t_params.leave_out_index_list[t_k]+i<t_params.data_size else i for i in range(t_params.n)],axis=0)
     else:
-        x = np.delete(t_data,[t_k+i if t_k+i<t_params.data_size else i for i in range(t_params.n)],axis=0)
-        print(x.shape)
-        return x
+        return np.delete(t_data,[t_k+i if t_k+i<t_params.data_size else i for i in range(t_params.n)],axis=0)
 
 def subdatasets(t_data, t_params):
     r"""
