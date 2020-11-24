@@ -1,88 +1,100 @@
 import numpy as np
 
-import qcdanalysistools.analysis as ana
+import qcdanalysistools.analysis as tools
 
-do_print = True
+# data shape (#gauge,*dim_estimator)
+data_shape = (212,8,4)
 
-data_shape = (102,12)
+bst_params = tools.BootstrapParams(
+    t_data_size = data_shape[0],
+    t_num_subdatasets = 10,
+    t_with_blocking = False,
+    t_num_blocks = 10)
 
-def test_estimator():
-    def obs(x,alpha=2):
-        return np.power(np.average(x,axis=0),alpha)
+def simple_obs(x,axis):
+    return np.power(np.average(x,axis=axis),2)
 
+def complicated_obs(x,axis):
+    if (x < 1).any():
+        chisq = 0
+    else:
+        chisq = 1
+    return np.power(np.average(x,axis=axis),2),chisq
+
+def test_full_Bootstrap():
     test_data = np.ones( shape=data_shape )
-    vali_data = 1
+    # Bootstrap if [1,1,1,] -> est = 1, var = 0
 
-    res = ana.bootstrap_est(
-        test_data,
-        t_num_subdata_sets = 50,
-        t_obs = obs,
-        alpha=20
-    )
+    est,var = tools.Bootstrap.bootstrap(test_data,bst_params,axis=0)
 
-    if do_print:
-        print("Test data:",test_data)
-        print("Result   :",res)
-        print("Valid res:",vali_data - res)
+    print("Estimator shape:",est.shape)
+    print("Variance shape :",var.shape)
 
-    if np.all(vali_data == res):
-        print("Estimator Works")
+    worked_flag = True
+    if (est != 1).all():
+        worked_flag = False
+        print(f"Estimator should be (1) but is {est}.")
+    if (var != 0).all():
+        worked_flag = False
+        print(f"Variance should be (0) but is {var}.")
 
-def test_variance():
+    if worked_flag:
+        print("Bootstrap method worked")
+    else:
+        print("Bootstrap method didn't work")
 
-    def obs(x,alpha=2):
-        return np.power(np.average(x,axis=0),alpha)
-
+def test_simple_Bootstrap():
     test_data = np.ones( shape=data_shape )
-    vali_data = 0
+    # Bootstrap if [1,1,1,] -> est = 1, var = 0
 
-    res = ana.bootstrap_var(
-        test_data,
-        t_num_subdata_sets = 50,
-        t_obs = obs,
-        alpha=20
-    )
+    est,var = tools.Bootstrap.bootstrap(test_data,bst_params,t_obs=simple_obs,axis=0)
 
-    if do_print:
-        print("Test data:",test_data)
-        print("Result   :",res)
-        print("Valid res:",vali_data - res)
+    print("Estimator shape:",est.shape)
+    print("Variance shape :",var.shape)
 
-    if np.all(vali_data == res):
-        print("Variance Works")
+    worked_flag = True
+    if (est != 1).all():
+        worked_flag = False
+        print(f"Estimator should be (1) but is {est}.")
+    if (var != 0).all():
+        worked_flag = False
+        print(f"Variance should be (0) but is {var}.")
 
-def test_jackknife():
-    # define trivial observable
-    def obs(x,alpha=2):
-        return np.power(np.average(x,axis=0),alpha)
+    if worked_flag:
+        print("Bootstrap method worked")
+    else:
+        print("Bootstrap method didn't work")
 
+def test_complicated_Bootstrap():
     test_data = np.ones( shape=data_shape )
-    vali_var = 0
-    vali_est = 1
+    # Bootstrap if [1,1,1,] -> est = 1, var = 0
 
-    est,var = ana.jackknife(
-        test_data,
-        t_obs = obs,
-        t_n = 1,
-        t_random_leaveout = False,
-        t_num_ran_indices = 20,
-        t_blocked = False,
-        t_num_blocks = True,
-        alpha=20
-    )
+    obs_out = [None]*bst_params.num_blocks
+    Theta_k = np.zeros(shape = (bst_params.num_blocks,*data_shape[1:]))
 
-    if do_print:
-        print("Test data:",test_data)
-        print("Estimator:",est)
-        print("Variance :",var)
-        print("ValidateE:",vali_est-est)
-        print("ValidateV:",vali_var-var)
+    for k in range(bst_params.num_blocks):
+        obs_out[k] = complicated_obs(tools.Bootstrap.subdataset(test_data,k,bst_params),axis=0)
+        Theta_k[k] = obs_out[k][0] # or however one accesses it
 
-    if np.all(vali_est == est) and np.all(vali_var == var):
-        print("Bootstrap Works")
+    est = tools.Bootstrap.skeleton_est(Theta_k,bst_params)
+    var = tools.Bootstrap.skeleton_var(Theta_k,bst_params)
 
-test_estimator()
-print("")
-test_variance()
-print("")
-test_jackknife()
+    print("Estimator shape:",est.shape)
+    print("Variance shape :",var.shape)
+
+    worked_flag = True
+    if (est != 1).all():
+        worked_flag = False
+        print(f"Estimator should be (1) but is {est}.")
+    if (var != 0).all():
+        worked_flag = False
+        print(f"Variance should be (0) but is {var}.")
+
+    if worked_flag:
+        print("Bootstrap method worked")
+    else:
+        print("Bootstrap method didn't work")
+
+test_full_Bootstrap()
+test_simple_Bootstrap()
+test_complicated_Bootstrap()

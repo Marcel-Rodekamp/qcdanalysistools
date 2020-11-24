@@ -1,3 +1,4 @@
-from .bootstrap import *
-from .jackknife import *
-from .blocking import *
+from .analysisParams import *
+from .Blocking import *
+from .Bootstrap import *
+from .Jackknife import *

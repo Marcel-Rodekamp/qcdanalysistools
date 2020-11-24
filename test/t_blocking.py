@@ -1,86 +1,101 @@
 import numpy as np
 
-import qcdanalysistools.analysis as ana
+import qcdanalysistools.analysis as tools
 
-do_print = True
+# data shape (#gauge,*dim_estimator)
+data_shape = (212,8)
 
-data_shape = (102,12)
-num_blocks = 10
+blk_params = tools.BlockingParams(
+    t_data_size = data_shape[0],
+    t_num_blocks = 10)
 
-def test_estimator():
-    # define trivial observable
-    def obs(x,alpha=2):
-        return np.power(np.average(x,axis=0),alpha)
+def simple_obs(x,axis):
+    return np.power(np.average(x,axis=axis),2)
 
+def complicated_obs(x,axis):
+    if (x < 1).any():
+        chisq = 0
+    else:
+        chisq = 1
+    return np.power(np.average(x,axis=axis),2),chisq
+
+def test_full_Blocking():
     test_data = np.ones( shape=data_shape )
-    vali_data = 1 #np.ones(  )
+    # Blocking if [1,1,1,] -> est = 1, var = 0
 
-    res = ana.blocking_est(
-        test_data,
-        t_obs = obs,
-        t_num_blocks = num_blocks,
-        alpha=20
-    )
+    est,var = tools.Blocking.blocking(test_data,blk_params,axis=0)
 
-    if do_print:
-        print("Test data:",test_data)
-        print("Result   :",res)
-        print("Valid res:",vali_data - res)
+    print("Estimator shape:",est.shape)
+    print("Variance shape :",var.shape)
 
-    if np.all(vali_data == res):
-        print("Estimator Works")
+    worked_flag = True
+    if (est != 1).all():
+        worked_flag = False
+        print(f"Estimator should be (1) but is {est}.")
+    if (var != 0).all():
+        worked_flag = False
+        print(f"Variance should be (0) but is {var}.")
 
-def test_variance():
-    # define trivial observable
-    def obs(x,alpha=2):
-        return np.power(np.average(x,axis=0),alpha)
+    if worked_flag:
+        print("Blocking method worked")
+    else:
+        print("Blocking method didn't work")
 
+def test_simple_Blocking():
     test_data = np.ones( shape=data_shape )
-    vali_data = 0
+    # Blocking if [1,1,1,] -> est = 1, var = 0
 
-    res = ana.blocking_var(
-        test_data,
-        t_obs = obs,
-        t_num_blocks = num_blocks,
-        alpha=20
-    )
+    est,var = tools.Blocking.blocking(test_data,blk_params,t_obs=simple_obs,axis=0)
 
-    if do_print:
-        print("Test data:",test_data)
-        print("Result   :",res)
-        print("Valid res:",vali_data - res)
+    print("Estimator shape:",est.shape)
+    print("Variance shape :",var.shape)
 
-    if np.all(vali_data == res):
-        print("Variance Works")
+    worked_flag = True
+    if (est != 1).all():
+        worked_flag = False
+        print(f"Estimator should be (1) but is {est}.")
+    if (var != 0).all():
+        worked_flag = False
+        print(f"Variance should be (0) but is {var}.")
 
-def test_jackknife():
-    # define trivial observable
-    def obs(x,alpha=2):
-        return np.power(np.average(x,axis=0),alpha)
+    if worked_flag:
+        print("Blocking method worked")
+    else:
+        print("Blocking method didn't work")
 
+def test_complicated_Blocking():
     test_data = np.ones( shape=data_shape )
-    vali_var = 0
-    vali_est = 1
+    # Blocking if [1,1,1,] -> est = 1, var = 0
 
-    est,var = ana.blocking(
-        test_data,
-        t_obs = obs,
-        t_num_blocks = num_blocks,
-        alpha=20
-    )
+    full_obs_out = complicated_obs(test_data,axis=0)
 
-    if do_print:
-        print("Test data:",test_data)
-        print("Estimator:",est)
-        print("Variance :",var)
-        print("ValidateE:",vali_est-est)
-        print("ValidateV:",vali_var-var)
+    obs_out = [None]*blk_params.num_blocks
+    Theta_k = np.zeros(shape = (blk_params.num_blocks,*data_shape[1:]))
 
-    if np.all(vali_est == est) and np.all(vali_var == var):
-        print("Blocking Works")
+    for k in range(blk_params.num_blocks):
+        obs_out[k] = complicated_obs(tools.Blocking.subdataset(test_data,k,blk_params),axis=0)
+        Theta_k[k] = obs_out[k][0] # or however one accesses it
 
-test_estimator()
-print("")
-test_variance()
-print("")
-test_jackknife()
+    est = tools.Blocking.skeleton_est(Theta_k,blk_params)
+    var = tools.Blocking.skeleton_var(Theta_k,blk_params)
+
+    print("Estimator shape:",est.shape)
+    print("Variance shape :",var.shape)
+
+    worked_flag = True
+    if (est != 1).all():
+        worked_flag = False
+        print(f"Estimator should be (1) but is {est}.")
+    if (var != 0).all():
+        worked_flag = False
+        print(f"Variance should be (0) but is {var}.")
+
+    if worked_flag:
+        print("Blocking method worked")
+    else:
+        print("Blocking method didn't work")
+
+
+test_full_Blocking()
+test_simple_Blocking()
+test_complicated_Blocking()
