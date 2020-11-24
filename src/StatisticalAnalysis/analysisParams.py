@@ -33,7 +33,7 @@ class JackknifeParams(AnalysisParams):
 
 class BootstrapParams(AnalysisParams):
     def __init__(self,t_data_size, t_num_subdatasets, t_with_blocking = False, t_num_blocks = None):
-        super().__init__("Bootstrap",t_data_size,t_with_blocking,t_num_blocks)
+        super().__init__("bootstrap",t_data_size,t_with_blocking,t_num_blocks)
 
         self.num_subdatasets = t_num_subdatasets
 
