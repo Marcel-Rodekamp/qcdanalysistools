@@ -55,7 +55,7 @@ def effective_mass_obs(t_symmetrized_correlator,t_initial_guess):
 
     return effective_mass
 
-def effective_mass(t_correlator,t_initial_guess, t_analysis_type, **analysis_kwargs):
+def effective_mass(t_correlator,t_initial_guess, t_analysis_params):
     r"""
         t_correlator: numpy.ndarray
             Lattice QCD correlator data in the format
@@ -70,15 +70,11 @@ def effective_mass(t_correlator,t_initial_guess, t_analysis_type, **analysis_kwa
             Nt is the number of points in the temporal dimension and m_eff is the
             effective mass, has to be solved for m_eff.
             This value is the initial guess for the solver.
-        t_analysis_type: string
+        t_analysis_params: AnalysisParams
             Determines the analysis type i.e. estimator and variance. Can be
                 * Jackknife: qcdanalysistools.analysis.jackknife
                 * Bootstrap: qcdanalysistools.analysis.bootstrap
                 * Blocking:  qcdanalysistools.analysis.blocking
-            Further specification and combinations are passed via
-        **analysis_kwargs:
-            keyworded arguments which are passed to the appropriate analysis tool
-            determined by t_analysis_type
 
         Returns: numpy.array, numpy.array
             The effective_mass for half of all time slizes is returned aswell as
@@ -96,33 +92,28 @@ def effective_mass(t_correlator,t_initial_guess, t_analysis_type, **analysis_kwa
 
         Requirements:
             * numpy
-            * qcdanalysistools (if Jackknife,Bootstrap and/or blocking)
+            * qcdanalysistools (if Jackknife,Bootstrap and/or Blocking)
             * scipy.optimize.fsolve
     """
 
-    if t_analysis_type == "Plain":
-        analysis = lambda data: ( np.average(data, axis=0),np.var(data,axis=0) )
-    elif t_analysis_type == "Jackknife":
-        from qcdanalysistools.analysis import jackknife
-        analysis = lambda data: jackknife(data,**analysis_kwargs,t_obs=effective_mass_obs,t_initial_guess=t_initial_guess)
-    elif t_analysis_type == "Bootstrap":
-        from qcdanalysistools.analysis import bootstrap
-        analysis = lambda data: bootstrap(data,**analysis_kwargs,t_obs=effective_mass_obs,t_initial_guess=t_initial_guess)
-    elif t_analysis_type == "Blocking":
-        from qcdanalysistools.analysis import blocking
-        analysis = lambda data: blocking(data,**analysis_kwargs,t_obs=effective_mass_obs,t_initial_guess=t_initial_guess)
-        pass
+    if t_analysis_params.analysis_type == "jackknife":
+        from qcdanalysistools.analysis.Jackknife import jackknife as analysis
+    elif t_analysis_params.analysis_type == "bootstrap":
+        from qcdanalysistools.analysis.Bootstrap import bootstrap as analysis
+    elif t_analysis_params.analysis_type == "blocking":
+        from qcdanalysistools.analysis.Blocking import blocking as analysis
     else:
-        print("## Warning: t_analysis_type =",t_analysis_type, "is not implemented, falling back to `Plain`")
-        analysis = lambda data: ( np.average(data, axis=0),np.var(data,axis=0) )
+        raise ValueError(f"No such analysis type ({t_analysis_params.analysis_type})")
 
     # project to the real part
-    print("Projected to Real")
     t_correlator = t_correlator.real
 
     # symmetrize the correlator of each element in the ensamble
     sym_correlator = symmetrize(t_correlator)
 
-    est, var = analysis(sym_correlator)
+    est, var = analysis(t_data  = sym_correlator,
+                        t_params= t_analysis_params,
+                        t_obs   = effective_mass_obs,
+                        t_initial_guess = t_initial_guess) # **obs_kwargs
 
     return est,var
