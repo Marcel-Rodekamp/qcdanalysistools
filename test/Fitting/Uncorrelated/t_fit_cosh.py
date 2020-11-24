@@ -24,7 +24,7 @@ y += np.random.randn(N_dat,Nx)
 x_red = x[7:41]
 
 # perform uncorrelated fit from qcdanalysistools.fitting
-Fit = tools.fitting.LeastSquareCorr(fit_model, t_ydata=y[:,7:41], t_xdata=x_red)
+Fit = tools.fitting.LeastSquare(fit_model, t_ydata=y[:,7:41], t_xdata=x_red)
 result = Fit.fit()
 
 # print results and compare by hand
