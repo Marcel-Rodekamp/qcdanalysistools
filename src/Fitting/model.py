@@ -1,70 +1,95 @@
 import numpy as np
 class ModelBase:
-    r"""
-        Base class of the fit models
-        Each model inheriting from this must implement
-            * self.apply(x,*Theta)
-            * self.jac_param(x)
-    """
     def __init__(self,t_num_params, t_Theta0):
         r"""
             t_num_params: int
-                Number of parameters
-            t_Theta0:
-                Initial values for the fit
+                Number of parameters of the model
+            t_Theta0: tuple
+                Initial values of parameters. Must be of shape (t_num_params,)
+
+            Base class for any model passed to qcdanalysistools.fitting
 
             Notes:
-                For reference `self.Theta` is ment to keep current values
-                so ensure that in each apply call `self.Theta` is set.
-
-                Also try to set these at the end of the fit.
+                * Each model inheriting from this must implement
+                    * self.apply(self,x,*args,**kwargs)
+                        * the model function
+                        --> evaluated in self.__call__
+                    * self.grad_param(self,x,*args,**kwargs)
+                        * jacobian array in respect to the parameters
+                    * self.hess_param(self,x,*args,**kwargs)
+                        * hessian matrix in respect to the parameters
+                    * self.__name__(self)
+                        * String describing the model
         """
         self.num_params = t_num_params
+
+        if len(t_Theta0) != t_num_params:
+            raise ValueError(f"Count of initial values t_Theta0 ({t_Theta0}) does not match the number of parameters ({t_num_params})")
+
+        # It is convenient to store the initial parameters. If the fitting is restarted
         self.Theta0 = t_Theta0
-        self.Theta = t_Theta0
 
-    def apply(self,x):
+    def apply(self,x,*args,**kwargs):
         raise NotImplementedError
 
-    def jac(self,x):
+    def grad_param(self,x,*args,**kwargs):
         raise NotImplementedError
+
+    def hess_param(self,x,*args,**kwargs):
+        raise NotImplementedError
+
+    def __call__(self,x,*args,**kwargs):
+        return self.apply(x,*args,**kwargs)
 
 class MonomialModel(ModelBase):
-    r"""
-        Monomial model
-        $$
-            f_n(x,A) = A * x^n
-        $$
-    """
     def __init__(self,t_A0,t_order):
         r"""
             t_A0: float
-                Initial guess of the parameter
+                Initial parameter
             t_order: int
                 Order of the monomial
+
+            Monomial Model:
+                $$
+                    f(x,A) = A * x^n
+                $$
+                where $n$ is the order
         """
         super().__init__(t_num_params = 1, t_Theta0 = (t_A0,))
+
         self.order = t_order
+
+    def __name__(self):
+        return f"f(x,A) = A x^{self.order}"
 
     def apply(self,t_x,t_A):
         r"""
-            t_x: numpy.array or float
-                Argument of the model
+            t_x: numpy.array
+                Argument of the model function (abscissa)
             t_A: float
                 Parameter which becomes fitted
         """
-        # set current parameter
-        self.Theta = (t_A,)
         return t_A * pow(t_x,self.order)
 
-    def jac_param(self,t_x):
+    def grad_param(self,t_x,t_A):
         """
-            t_x: numpy.array or float
-                Argument of the model
-
-            Implements the jacobian of the model in respect to the parameters
+            t_x: numpy.array
+                Argument of the model function (abscissa)
+            t_A: float
+                Parameter which becomes fitted
         """
         return np.array( [ pow(t_x,self.order) ] )
+
+    def hess_param(self,t_x,t_A):
+        """
+            t_x: numpy.array
+                Argument of the model function (abscissa)
+            t_A: float
+                Parameter which becomes fitted
+        """
+        # note the result must always be a num_params x num_params matrix
+        # thus the inconvenient return code here.
+        return np.array([[0]])
 
 class FirstEnergyCoshModel(ModelBase):
     def __init__(self,t_A0,t_E0,t_Nt):
@@ -75,14 +100,63 @@ class FirstEnergyCoshModel(ModelBase):
                 Initial guess of energy parameter
             t_Nt: int
                 Temporal extend
+
+            First energy cosh model is given by
+                $$
+                f(t,A,E) = A * cosh( (t-Nt/2)*E )
+                $$
+            This is used to extract first energy level (E) from 2-point-correlators
+            For details see e.g.
+                Christof Gattringer and Christian Lang.
+                Quantum chromodynamics on the lattice: an introductory presentation.
+                Vol. 788. Springer Science & Business Media, 2009.
         """
         super().__init__(t_num_params = 2, t_Theta0 = (t_A0,t_E0,))
         self.Nt_half = t_Nt/2
 
     def apply(self,t_x,t_A,t_E):
-        self.Theta = (t_A,t_E)
-        return t_A*np.cosh((t_x-self.Nt_half)*t_E)
+        r"""
+            t_x: numpy.array
+                Argument of the model function (abscissa)
+            t_A: float
+                Scaling parameter
+            t_E: float
+                First energy level
+        """
+        return t_A * np.cosh( (t_x - self.Nt_half) * t_E )
 
-    def jac_param(self,t_x):
-        arg = (t_x-self.Nt_half)
-        return np.array( [ np.cosh(arg*self.Theta[1]), arg*self.Theta[0]*np.sinh(arg*self.Theta[1])] )
+    def grad_param(self,t_x,t_A,t_E):
+        r"""
+            t_x: numpy.array
+                Argument of the model function (abscissa)
+            t_A: float
+                Scaling parameter
+            t_E: float
+                First energy level
+        """
+        buf= (t_x-self.Nt_half)
+
+        dA = np.cosh(buf*t_E)
+        dE = t_A*buf*np.sinh(buf*t_E)
+
+        return np.array( [ dA,dE ] )
+
+    def hess_param(self,t_x,t_A,t_E):
+        r"""
+            t_x: numpy.array
+                Argument of the model function (abscissa)
+            t_A: float
+                Scaling parameter
+            t_E: float
+                First energy level
+        """
+        buf = (t_x-self.Nt_half)
+
+        dA2 = np.zeros(x.size)
+        dE2 = t_A * np.square(buf) * np.cosh( buf * t_E )
+        dAdE = buf * np.sinh( buf * t_E ) # = dEdA
+
+        return np.array( [ [dA2,dAdE],[dAdE,dE2] ] )
+
+    def __name__(self):
+        return f"f(t,A,E) = A*cosh( (t-N/2)*E )"
