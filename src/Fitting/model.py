@@ -1,11 +1,13 @@
 import numpy as np
 class ModelBase:
-    def __init__(self,t_num_params, t_Theta0):
+    def __init__(self,t_num_params, t_params0, t_param_names):
         r"""
             t_num_params: int
                 Number of parameters of the model
-            t_Theta0: tuple
+            t_params0: tuple
                 Initial values of parameters. Must be of shape (t_num_params,)
+            t_parameter_names: tuple of string
+                Strings representing the parameters
 
             Base class for any model passed to qcdanalysistools.fitting
 
@@ -23,11 +25,13 @@ class ModelBase:
         """
         self.num_params = t_num_params
 
-        if len(t_Theta0) != t_num_params:
-            raise ValueError(f"Count of initial values t_Theta0 ({t_Theta0}) does not match the number of parameters ({t_num_params})")
+        if len(t_params0) != t_num_params:
+            raise ValueError(f"Count of initial values t_params0 ({t_params0}) does not match the number of parameters ({t_num_params})")
 
         # It is convenient to store the initial parameters. If the fitting is restarted
-        self.Theta0 = t_Theta0
+        self.params0 = t_params0
+
+        self.param_names = t_param_names
 
     def apply(self,x,*args,**kwargs):
         raise NotImplementedError
@@ -55,7 +59,7 @@ class MonomialModel(ModelBase):
                 $$
                 where $n$ is the order
         """
-        super().__init__(t_num_params = 1, t_Theta0 = (t_A0,))
+        super().__init__(t_num_params = 1, t_params0 = (t_A0,), t_param_names = ("A",))
 
         self.order = t_order
 
@@ -89,7 +93,7 @@ class MonomialModel(ModelBase):
         """
         # note the result must always be a num_params x num_params matrix
         # thus the inconvenient return code here.
-        return np.array([[0]])
+        return np.array([[np.zeros(shape=t_x.shape)]])
 
 class FirstEnergyCoshModel(ModelBase):
     def __init__(self,t_A0,t_E0,t_Nt):
@@ -111,7 +115,7 @@ class FirstEnergyCoshModel(ModelBase):
                 Quantum chromodynamics on the lattice: an introductory presentation.
                 Vol. 788. Springer Science & Business Media, 2009.
         """
-        super().__init__(t_num_params = 2, t_Theta0 = (t_A0,t_E0,))
+        super().__init__(t_num_params = 2, t_params0 = (t_A0,t_E0,), t_param_names = ("A","E"))
         self.Nt_half = t_Nt/2
 
     def apply(self,t_x,t_A,t_E):
@@ -152,11 +156,11 @@ class FirstEnergyCoshModel(ModelBase):
         """
         buf = (t_x-self.Nt_half)
 
-        dA2 = np.zeros(x.size)
+        dA2 = np.zeros(t_x.size)
         dE2 = t_A * np.square(buf) * np.cosh( buf * t_E )
         dAdE = buf * np.sinh( buf * t_E ) # = dEdA
 
         return np.array( [ [dA2,dAdE],[dAdE,dE2] ] )
 
     def __name__(self):
-        return f"f(t,A,E) = A*cosh( (t-N/2)*E )"
+        return f"f(t,A,E) = A*cosh( (t-Nt/2)*E )"

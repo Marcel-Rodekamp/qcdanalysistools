@@ -3,84 +3,117 @@ r"""
     This file contains a base fitting class which is used in all subsequent fitting methods.
 """
 import numpy as np
+import scipy.optimize as opt
 import itertools
+import warnings
 
 class FitBase():
-    r"""
-        Base class to fit a given lattice data.
-        The initialization preprocesses the data so that it can be used in the
-        common minimization method of scipy.optimize.
-    """
-    def __init__(self,t_model,t_ydata,t_xdata,*min_args,**min_kwargs):
+    def __init__(self,t_model,t_abscissa,t_data=None,t_ordinate=None,t_analysis_params=None):
         r"""
             t_model: qcdanalysistools.fitting.model
                 A model to which the data should be fit. Commonly, it needs to
                 implement a function
-                    * t_mode.jac_param(x):
+                    * t_mode.hess_param(x,*Theta):
+                        Computing the hessian of the model function
+                        in respect to the parameters thus needs to
+                        return an array of size (num_params,num_params)
+                    * t_mode.grad_param(x,*Theta):
                         Computing the jacobian of the model
                         function in respect to the parameters
                         thus needs to return an array of size
-                        #parameters.
-                    * t_mode.apply(x,*Theta):
-                        Computing the model function at a given input x and parameters
-                        *Theta = (Theta_0,Theta_1,...)
+                        (num_params,).
+                    * t_mode.__call__(x,*Theta):
+                        Computing the model function at a given input x
+                        and parameters *Theta = (Theta_0,Theta_1,...)
                     * num_params:
                         Number of parameters to fit to
                     * Theta0:
                         Tuple of first guess for each parameter.
-            t_ydata: numpy.ndarray
-                Array representing the data to which the model is fit s.t.
-                    ```
-                        t_ydata - t_model(x,*Theta)
-                    ```
-                becomes minimized.
-            t_xdata: numpy.ndarray
-                Array representing the arguments of the of the fit model.
-                The model is evaluated at these points to minimize a residual.
-            *min_args: arguments
-                Optional arguments passed to `scipy.optimize.minimize`
-            **min_kwargs: keyworded arguments
-                Optional keyworded arguments passed to `scipy.optimize.minimize`
+            t_abscissa: numpy.array
+                Abscissa used to evaluate the model function. Needs to be of
+                shape (D,).
+            t_data: numpy.ndarray
+                Results from a lattice qcd simulation to which the model should
+                be fitted. Needs to be of shape (N,D) where N is then number of
+                configurations. Can be None but then t_ordinate must be given!
+            t_ordinate: numpy.array
+                If the data is already processed (e.g. averaged) the ordinate to
+                which the model is fitted can be given explicitly. This is required
+                if t_data is None.
+            t_analysis_params: qcdanalysistools.analysis.AnalysisParams
+                Is one of the analysis parameter instantation defined in
+                    src/StatisticalAnalysis/analysisParams.py
+                Used to preprocess the data but can be None. Then preprocessing
+                is achived with numpy.average.
 
             This class represents the base class to all fitting methods.
-            It defines a ...
+            It handles the basic data preparation i.e. preparing the ordinate and
+            abscissa for the fit. (Co)variance handling has to be done in derived
+            classes at it is not general that any method will use those.
 
             Notes:
 
-            * If t_ydata is one dimensional an extra dimension is opened representing
-            a single gauge configuration. This merely assumes that the data is already
-            averaged over all gauge configuration. It must be done as the covariance
-            calculation assumes a 2-dimensional input.
-            * cov_y and its inverse incorperate the correlation matrix i.e.
-            $$
-                \frac{CoV[ydata]_{i,j}}{\sqrt{\sigma_i\sigma_j}}
-            $$
-            This is prefered agains the covariance matrix as it is less singular
             * All classes deriving from this must implement
-                self.fit()
+                * self.fit()
+                    This method is used in the __call__ implementation.
+                * self.print_result()
 
         """
         # store the model: models are defined in model.py or selfdeveloped based
         # on qcdanalysistools.fitting.ModelBase
         self.model = t_model
+        # store the analysis parameter
+        self.analysis_params = t_analysis_params
         # Store the desired frequencies i.e. the data to fit against
-        # if the data is not two dimensional e.g. (#axis,#gauge) raise ValueError
-        if len(t_ydata.shape) != 2:
-            raise ValueError(f"t_ydata must be 2-dimensional but is of shape {t_ydata.shape}")
-        self.ydata = t_ydata
+        # The classes will manage the data and generate a ordninate from it if not given.
+        if t_data is None:
+            # If t_data is not given the ordninate needs to be given and set here
+            # the ordinate_cov/ordinate_var must be apperent. This has to be
+            # computed in the derived classes.
+            if t_ordinate is None:
+                raise ValueError(f"Fitting requires either t_data or t_ordinate")
+            if len(t_ordinate.shape) != 1:
+                raise ValueError(f"t_ordinate must be 1-dimensional but is of shape {t_ordinate.shape}")
+
+            self.ordinate = t_ordinate
+        else:
+            # If t_data is apperent but the ordinate ist not store the data and
+            # compute the ordinate with the given analysis type
+
+            # data must be 2-dimensional e.g. (#gauge,D=Nt...)
+            if len(t_data.shape) != 2:
+                raise ValueError(f"t_data must be 2-dimensional but is of shape {t_ydata.shape}")
+
+            # store the data
+            self.data = t_data
+
+            if t_ordinate is None:
+                if t_analysis_params is None:
+                    # fallback to standard average if no analysis method is given
+                    self.ordinate = np.average(self.data,axis=0)
+                elif t_analysis_params.analysis_type == "bootstrap":
+                    from qcdanalysistools.analysis.Bootstrap import est
+                    self.ordinate = est(self.data,self.analysis_params,axis=0)
+                elif t_analysis_params.analysis_type == "jackknife":
+                    from qcdanalysistools.analysis.Jackknife import est
+                    self.ordinate = est(self.data,self.analysis_params,axis=0)
+                elif t_analysis_params.analysis_type == "blocking":
+                    from qcdanalysistools.analysis.Blocking import est
+                    self.ordinate = est(self.data,self.analysis_params,axis=0)
+            else:
+                # if the data is given and also the ordinate, store it
+                if len(t_ordinate.shape) != 1:
+                    raise ValueError(f"t_ordinate must be 1-dimensional but is of shape {t_ordinate.shape}")
+
+                self.ordinate = t_ordinate
 
         # Store the argument of the model e.g. time axis.
-        self.xdata = t_xdata
+        # it must have same dimension as the computed or given ordinate
+        self.abscissa = t_abscissa
 
-        # if the data shapes do not mathc the expectation raise ValueError
-        if t_ydata.shape[1] != t_xdata.shape[0]:
-            raise ValueError(f"Axis 1 of t_ydata ({t_ydata.shape[1]}) must have same length as axis 0 of t_xdata ({t_xdata.shape[0]}).")
-
-        # optional arguments which are passed to the scipy.optimize.minimization
-        # method. For documentation please refer to
-        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
-        self.min_args = min_args
-        self.min_kwargs = min_kwargs
+        # Check that ordinate and abscissa extend match
+        if self.abscissa.size != self.ordinate.size:
+            raise ValueError(f"Abscissa size ({self.abscissa.size}) and ordinate size ({self.ordninate.size}) must match!")
 
         # store the report from the minimization procedure i.e. scipy.optimize.OptimizeResult
         self.min_stats = dict()
@@ -89,58 +122,80 @@ class FitBase():
         # once the self.fit() method is called
         self.fit_stats = dict()
 
-        # Data preprocessing ===================================================
+        # list of all solvers within the scipy.optimize library. All are required
+        # WARNING: DO NOT CHANGE THIS LIST UNLESS YOU KNOW WHAT YOU ARE DOING!!!
+        self.list_of_minimize_methods = ['Nelder-Mead',  #
+                                         'Powell',       #
+                                         'COBYLA',       #
+                                         'CG',           # jacobian
+                                         'BFGS',         # jacobian
+                                         'L-BFGS-B',     # jacobian
+                                         'TNC',          # jacobian
+                                         'SLSQP',        # jacobian
+                                         'Newton-CG',    # jacobian, hessian
+                                         'dogleg',       # jacobian, hessian
+                                         'trust-constr', # jacobian, hessian
+                                         'trust-ncg',    # jacobian, hessian
+                                         'trust-exact',  # jacobian, hessian
+                                         'trust-krylov', # jacobian, hessian
+                                        ]
 
-        # freeze covariance matrix
-        self.cov_y = np.cov(self.ydata.T)
+    def chisq(self,params):
+        raise NotImplementedError
 
-        # compute its inverse
-        self.cov_y_inv = np.linalg.inv(self.cov_y)
+    def grad_chisq(self,params):
+        raise NotImplementedError
 
-        # check that the inverse worked out
-        res = np.linalg.norm(self.cov_y @ self.cov_y_inv - np.identity(self.cov_y.shape[0]))
-        if res > pow(10,-8):
-            raise ValueError(f"Matrix inverse of the ydata correlation matrix is not precise: residuum = {res}")
+    def hess_chisq(self,params):
+        raise NotImplementedError
 
-    def _cov(self):
+    def _fit(self):
         r"""
-            This function implements the computation of the covariance of the parammeters
-            i.e.
-            $$
-                Cov[\Theta] = \left( J_\Theta C^{-1} J_\Theta^T \right)^{-1}
-            $$
-            where J is the jacobian of the model in respect to the parameters $\Theta$
+            Calls the different minimization methods of scipy.optimize to minimize
+            the objective function self.chisq
+            Requires implementation of:
+                * self.chisq
+                * self.grad_chisq
+                * self.hess_chisq
+            Bases on the order of self.list_of_minimize_methods
         """
-        # get dimension of the array:
-        # i.e. number of parameters
-        num_params = self.model.num_params
-        # e.g. number of time slices Nt
-        num_axis_points = self.ydata.shape[1]
+        min_res_list = []
 
-        # compute the parameter jacobian from the model i.e. df(x_i,Theta)/dTheta_a
-        # The shape must be (num_params,num_axis_points)
-        J = self.model.jac_param(self.xdata)
+        # scipy throws overflow warnings which should not be printed here as those minimizations have no success they become removed anyway
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            for i_method, method in enumerate(self.list_of_minimize_methods):
+                print(f"Correlated Least Square: Trying minimization of \u1d61\u00B2 with {method}", end='... ')
+                # 2. minimize, note not all use gradient and hessian information
+                #              the if condition take care of it. This is why the order
+                #              of list_of_minimize_methods is important
+                # WARNING: DO NOT CHANGE THESE IF CONDITION UNLESS YOU KNOW WHAT YOU ARE DOING!!!
+                if i_method < 3:
+                    # they do not use jacobian nore hessp
+                    min_res = opt.minimize(self.chisq,self.model.params0,method=method)
+                elif 2 < i_method < 8:
+                    # they do not use hessp
+                    min_res = opt.minimize(self.chisq,self.model.params0,method=method,jac=self.grad_chisq)
+                else:
+                    # they use both
+                    min_res = opt.minimize(self.chisq,self.model.params0,method=method,jac=self.grad_chisq,hess=self.hess_chisq)
 
-        if J.shape != (num_params,num_axis_points):
-            raise ValueError(f"Jacobian of model {self.model} has wrong shape: {jac_model.shape}. Require a shape of ({(num_params,num_axis_points)})")
+                # 3. only append results if minimization succeeded
+                if min_res['success']:
+                    min_res_list.append(min_res)
+                    print("succeeded")
+                else:
+                    # I think it is not important why minimization did not work. If you need to know interchange these print statements.
+                    #print(f"failed:\n {min_res}")
+                    print("failed")
 
-        # allocate memory for the inverse covariance matrix of dimension #params x #params
-        cov_inv = np.zeros(shape=(num_params,num_params))
-
-        for a,b in itertools.product(range(num_params),repeat=2):
-            for t1,t2 in itertools.product(range(num_axis_points),repeat = 2):
-                # compute matrix product J @ CoV[data] @ J^T
-                cov_inv[a,b] += J[a,t1]*self.cov_y[t1,t2]*J[b,t2]
-
-        # invert the expression
-        cov = np.linalg.inv(cov_inv*self.ydata.shape[0])
-
-        # check that the inverse worked out
-        res = np.linalg.norm(cov @ cov_inv*self.ydata.shape[0] - np.identity(num_params))
-        if res > pow(10,-8):
-            raise ValueError(f"Matrix inverse of the fit parameter covariance matrix is not precise: residuum = {res}")
-
-        return cov
+        return min_res_list
 
     def fit(self,*args,**kwargs):
         raise NotImplementedError
+
+    def print_result(self):
+        raise NotImplementedError
+
+    def __call__(self,*args,**kwargs):
+        return self.fit(*args,**kwargs)
