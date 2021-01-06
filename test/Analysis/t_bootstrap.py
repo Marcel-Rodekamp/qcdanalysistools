@@ -73,7 +73,7 @@ def test_complicated_Bootstrap():
     Theta_k = np.zeros(shape = (bst_params.num_blocks,*data_shape[1:]))
 
     for k in range(bst_params.num_blocks):
-        obs_out[k] = complicated_obs(tools.Bootstrap.subdataset(test_data,k,bst_params),axis=0)
+        obs_out[k] = complicated_obs(tools.Bootstrap.subdataset(test_data,bst_params),axis=0)
         Theta_k[k] = obs_out[k][0] # or however one accesses it
 
     est = tools.Bootstrap.skeleton_est(Theta_k,bst_params)
