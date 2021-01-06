@@ -62,14 +62,12 @@ def BootstrapAssert(t_params):
 # Creating Data Subsets following the Jackknife, leave n out, methods
 # ==============================================================================
 
-def subdataset(t_data, t_k, t_params):
+def subdataset(t_data, t_params):
     r"""
         t_data: numpy.ndarray
             Data array, containing the raw data. It is assumed,
             that axis=0 represents the data points of the method and subsequent
             axis' are assumed to represent multidimensional estimators.
-        t_k: int
-            Index of the subdata set
         t_params: JackknifeParams
             Parameter of the jackknife method
 
@@ -78,10 +76,6 @@ def subdataset(t_data, t_k, t_params):
             total size of t_data.
     """
     BootstrapAssert(t_params)
-
-    if t_k >= t_params.num_subdatasets:
-        raise ValueError(f"t_k ({t_k}) to large for data set t_data of size ({t_data.shape[0]}) with n ({t_params.n})")
-
     return np.take(t_data,[np.random.randint(0,high=t_params.data_size) for _ in range(t_params.data_size)],axis=0)
 
 def subdatasets(t_data,t_params):
@@ -106,7 +100,7 @@ def subdatasets(t_data,t_params):
 # Bits and Pieces
 # ==============================================================================
 
-def est_k(t_data, t_params, t_k, t_obs = np.average, **obs_kwargs):
+def est_k(t_data, t_params, t_obs = np.average, **obs_kwargs):
     r"""
         t_data: numpy.ndarray
             Array, containing the full data set. It is assumed,
@@ -116,8 +110,6 @@ def est_k(t_data, t_params, t_k, t_obs = np.average, **obs_kwargs):
         t_obs: function, default: numpy.average
             Observable which should be computed over t_data. This can be useful if
             the t_obs outputs only the required estimators in each subdata set.
-        t_k: int, default: None
-            Determines which data sub set is taken.
         **obs_kwargs: keyworded arguments
             Keyworded arguments passed to t_obs
 
@@ -128,7 +120,7 @@ def est_k(t_data, t_params, t_k, t_obs = np.average, **obs_kwargs):
     """
     BootstrapAssert(t_params)
 
-    return t_obs(subdataset(t_data, t_k, t_params),**obs_kwargs)
+    return t_obs(subdataset(t_data,t_params),**obs_kwargs)
 
 def skeleton_est(t_estimators,t_params):
     r"""
@@ -165,9 +157,8 @@ def skeleton_var(t_estimators,t_params):
         except:
             raise ValueError(f"The estimators need to be of list type but are ({type(t_estimators)}).")
 
-
     if t_estimators.shape[0] != t_params.num_subdatasets:
-        raise ValueError(f"The estimators on subdata sets are not valid, require axis 0 of length ({t_params.num_subdatasets}) but got (t_estimators.shape[0]).")
+        raise ValueError(f"The estimators on subdata sets are not valid, require axis 0 of length ({t_params.num_subdatasets}) but got ({t_estimators.shape[0]}).")
 
     return np.var(t_estimators,axis=0)
 
@@ -205,7 +196,7 @@ def est(t_data, t_params, t_obs = np.average, **obs_kwargs):
     # 2. & 3.
     Theta_k = [None]*t_params.num_subdatasets
     for k in range(t_params.num_subdatasets):
-        Theta_k[k] = est_k(t_data, t_params, k, t_obs, **obs_kwargs)
+        Theta_k[k] = est_k(t_data, t_params, t_obs, **obs_kwargs)
 
     # 4. & 5. & 6.
     return skeleton_est(Theta_k,t_params)
@@ -240,7 +231,7 @@ def var(t_data, t_params, t_obs = np.average, **obs_kwargs):
     # 2. & 3.
     Theta_k = [None]*t_params.num_subdatasets
     for k in range(t_params.num_subdatasets):
-        Theta_k[k] = est_k(t_data, t_params, k, t_obs, **obs_kwargs)
+        Theta_k[k] = est_k(t_data, t_params, t_obs, **obs_kwargs)
 
     # 4. & 5. & 6.
     return skeleton_var(Theta_k,t_params)
@@ -283,7 +274,7 @@ def bootstrap(t_data, t_params, t_obs = np.average, **obs_kwargs):
 
             Theta_k = [None]*t_params.num_subdatasets
             for k in range(t_params.num_subdatasets):
-                Theta_k[k] = est_k(data_block, t_params, k, t_obs, **obs_kwargs)
+                Theta_k[k] = est_k(data_block, t_params, t_obs, **obs_kwargs)
 
             l_est[block_id] = skeleton_est(Theta_k,t_params)
             l_var[block_id] = skeleton_var(Theta_k,t_params)
@@ -294,7 +285,7 @@ def bootstrap(t_data, t_params, t_obs = np.average, **obs_kwargs):
         # 2. & 3.
         Theta_k = [None]*t_params.num_subdatasets
         for k in range(t_params.num_subdatasets):
-            Theta_k[k] = est_k(t_data, t_params, k, t_obs, **obs_kwargs)
+            Theta_k[k] = est_k(t_data, t_params, t_obs, **obs_kwargs)
 
         # 4. & 5.
         est = skeleton_est(Theta_k,t_params)

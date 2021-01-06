@@ -219,8 +219,8 @@ def est(t_data, t_params, t_obs = np.average, **obs_kwargs):
     BlockingAssert(t_params)
 
     # 1. & 2.
-    Theta_k = [None]*t_num_blocks
-    for k,x_k in enumerate(blocked_data):
+    Theta_k = [None]*t_params.num_blocks
+    for k in range(t_params.num_blocks):
         Theta_k[k] = est_k(t_data,t_params,k,t_obs,**obs_kwargs)
 
     # 3. & 4.
