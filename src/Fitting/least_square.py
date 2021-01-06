@@ -217,9 +217,8 @@ class DiagonalLeastSquare(FitBase):
         self.fit_stats['Fit error'] = np.sqrt(np.diag(self.fit_stats['Cov']))
         # compute reduced chisq
         self.fit_stats['red chisq'],self.fit_stats['p-value']  = scipy.stats.chisquare(self.fit_stats['Best fit'],f_exp=self.ordinate)
-
         if self.data is not None:
-            dof = self.data[0] - self.data[1]
+            dof = self.data.shape[0] - self.data.shape[1]
             # compute Akaike information criterion for normally distributed errors
             self.fit_stats['AIC'] = AIC_chisq(dof, self.fit_stats['red chisq'])
             # compute Akaike information criterion for small data sets
