@@ -1,5 +1,5 @@
 build/
 results/
-test/Fitting/read_aff
+test/Fitting/read_aff.py
 test/Fitting/test_Correlated_fit.py
 test/Fitting/__pycache__
