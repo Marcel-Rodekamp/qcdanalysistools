@@ -199,11 +199,12 @@ class DiagonalLeastSquare(FitBase):
             raise RuntimeError(f"No minimization technique worked for fitting. Try using different start parameters.")
 
         # 4. find the smallest chisq of all algorithms
-        params = min_res_list[0]['x']
+        self.min_stats = min_res_list[0]
         fun = min_res_list[0]['fun']
         # TODO: Do we require a faster algorithm here? Try tree structure then.
         for res in min_res_list[1:]:
             if fun > res['fun']:
+                fun = res['fun']
                 self.min_stats = res
 
         # 5. Get fit statistics
@@ -468,8 +469,8 @@ class CorrelatedLeastSquare(FitBase):
         # TODO: Do we require a faster algorithm here? Try tree structure then.
         for res in min_res_list[1:]:
             if fun > res['fun']:
+                fun = res['fun']
                 self.min_stats = res
-                i_best_method = i_res
 
         # 5. Get fit statistics
         # store the best fit parameter
