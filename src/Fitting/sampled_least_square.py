@@ -522,7 +522,7 @@ class Sampled_CorrelatedLeastSquare(FitBase):
         # compute and store the fit error from the sampling
         self.fit_stats['Fit sampled error'] = np.sqrt(np.var(param_per_sample,axis=0))
         # artificially compute the covariance matrix of the parameter from the backed up data
-        self.fit_stats['Cov'] = cov_fit_param(self.abscissa,self.ordinate_frozen,self.ordinate_cov_inv_frozen,self.model,self.fit_stats['Param'])
+        self.fit_stats['Cov'] = cov_fit_param(self.abscissa,self.ordinate_frozen,self.ordinate_cov_inv_frozen,self.model,self.fit_stats['Param'],self.inv_acc)
         # compute and store the fit error
         self.fit_stats['Fit error'] = np.sqrt(np.diag(self.fit_stats['Cov']))
         # store best fit data points evaluated over xdata
