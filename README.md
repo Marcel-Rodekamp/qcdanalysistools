@@ -59,6 +59,9 @@ def AIC_chisq(t_dof, t_chisq)
 def AICc_chisq(t_dof, t_datasize, *AIC_args, **AIC_kwargs)
 def AIC_weights(t_AICs)
 ```
+* dimension transformations
+    * mass: `def  massMeV(t_mlat, t_a, t_mlat_err = None, t_a_err = None)`
+        * Note: Either both or no err parameter must be given.
 
 
 ## Requirements
