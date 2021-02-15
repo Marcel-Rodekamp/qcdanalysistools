@@ -265,6 +265,7 @@ def bootstrap(t_data, t_params, t_obs = np.average, **obs_kwargs):
         from ..analysisParams import BlockingParams
 
         bl_params = BlockingParams(t_params.data_size,t_params.num_blocks)
+        t_params.data_size = bl_params.block_size
 
         l_est = [None]*bl_params.num_blocks
         l_var = [None]*bl_params.num_blocks
@@ -281,6 +282,8 @@ def bootstrap(t_data, t_params, t_obs = np.average, **obs_kwargs):
 
         est = np.average(l_est,axis=0)
         var = np.average(l_var,axis=0)
+
+        t_params.data_size = bl_params.data_size
     else:
         # 2. & 3.
         Theta_k = [None]*t_params.num_subdatasets
