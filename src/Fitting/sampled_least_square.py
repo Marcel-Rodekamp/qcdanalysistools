@@ -202,10 +202,12 @@ class Sampled_DiagonalLeastSquare(FitBase):
         # 5. Get fit statistics
         # store the best fit parameter
         self.fit_stats['Param'] = np.average(param_per_sample,axis=0)
-        # compute and store the fit error
-        self.fit_stats['Fit error'] = np.sqrt(np.var(param_per_sample,axis=0))
+        # compute and store the fit error from the sampling
+        self.fit_stats['Fit sampled error'] = np.sqrt(np.var(param_per_sample,axis=0))
         # artificially compute the covariance matrix of the parameter from the backed up data
         self.fit_stats['Cov'] = cov_fit_param(self.abscissa,self.ordinate_frozen,np.diag(np.divide(np.ones_like(self.ordinate_var_frozen),self.ordinate_var_frozen)),self.model,self.fit_stats['Param'])
+        # compute and store the fit error
+        self.fit_stats['Fit error'] = np.sqrt(np.diag(self.fit_stats['Cov']))
         # store best fit data points evaluated over xdata
         self.fit_stats['Best fit'] = self.model(self.abscissa,*self.fit_stats['Param'])
         # define the degrees of freedom
@@ -228,7 +230,7 @@ class Sampled_DiagonalLeastSquare(FitBase):
         out_str+= "=======================================\n"
         out_str+= "========= Best Fit Parameter: =========\n"
         for i_param in range(self.model.num_params):
-            out_str+=f"{self.model.param_names[i_param]} = {self.fit_stats['Param'][i_param]:.6e} \u00B1 {self.fit_stats['Fit error'][i_param]: .6e}\n"
+            out_str+=f"{self.model.param_names[i_param]} = {self.fit_stats['Param'][i_param]:.6e} \u00B1 {self.fit_stats['Fit error'][i_param]:.6e} ({self.fit_stats['Fit sampled error'][i_param]:.6e} : sample)\n"
 
         out_str+= "========= Best Fit Covariance: ========\n"
         for i in range(self.model.num_params):
@@ -517,10 +519,12 @@ class Sampled_CorrelatedLeastSquare(FitBase):
         # 5. Get fit statistics
         # store the best fit parameter
         self.fit_stats['Param'] = np.average(param_per_sample,axis=0)
-        # compute and store the fit error
-        self.fit_stats['Fit error'] = np.sqrt(np.var(param_per_sample,axis=0))
+        # compute and store the fit error from the sampling
+        self.fit_stats['Fit sampled error'] = np.sqrt(np.var(param_per_sample,axis=0))
         # artificially compute the covariance matrix of the parameter from the backed up data
         self.fit_stats['Cov'] = cov_fit_param(self.abscissa,self.ordinate_frozen,self.ordinate_cov_inv_frozen,self.model,self.fit_stats['Param'])
+        # compute and store the fit error
+        self.fit_stats['Fit error'] = np.sqrt(np.diag(self.fit_stats['Cov']))
         # store best fit data points evaluated over xdata
         self.fit_stats['Best fit'] = self.model(self.abscissa,*self.fit_stats['Param'])
         # define the degrees of freedom
@@ -543,7 +547,7 @@ class Sampled_CorrelatedLeastSquare(FitBase):
         out_str+= "=======================================\n"
         out_str+= "========= Best Fit Parameter: =========\n"
         for i_param in range(self.model.num_params):
-            out_str+=f"{self.model.param_names[i_param]} = {self.fit_stats['Param'][i_param]:.6e} \u00B1 {self.fit_stats['Fit error'][i_param]: .6e}\n"
+            out_str+=f"{self.model.param_names[i_param]} = {self.fit_stats['Param'][i_param]:.6e} \u00B1 {self.fit_stats['Fit error'][i_param]:.6e} ({self.fit_stats['Fit sampled error'][i_param]:.6e} : sample)\n"
 
         out_str+= "========= Best Fit Covariance: ========\n"
         for i in range(self.model.num_params):
