@@ -165,7 +165,7 @@ class FitBase():
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             for i_method, method in enumerate(self.list_of_minimize_methods):
-                print(f"Correlated Least Square: Trying minimization of \u1d61\u00B2 with {method}", end='... ')
+                #print(f"Correlated Least Square: Trying minimization of \u1d61\u00B2 with {method}", end='... ')
                 # 2. minimize, note not all use gradient and hessian information
                 #              the if condition take care of it. This is why the order
                 #              of list_of_minimize_methods is important
@@ -183,11 +183,11 @@ class FitBase():
                 # 3. only append results if minimization succeeded
                 if min_res['success']:
                     min_res_list.append(min_res)
-                    print("succeeded")
-                else:
+                    #print("succeeded")
+                #else:
                     # I think it is not important why minimization did not work. If you need to know interchange these print statements.
                     #print(f"failed:\n {min_res}")
-                    print("failed")
+                    #print("failed")
 
         return min_res_list
 
