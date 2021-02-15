@@ -204,10 +204,13 @@ class DiagonalLeastSquare(FitBase):
         self.fit_stats['Cov'] = cov_fit_param(self.abscissa,self.ordinate,np.diag(np.divide(np.ones_like(self.ordinate_var),self.ordinate_var)),self.model,self.min_stats['x'])
         # compute and store the fit error
         self.fit_stats['Fit error'] = np.sqrt(np.diag(self.fit_stats['Cov']))
+        # define the degrees of freedom
+        dof = len(self.abscissa)-self.model.num_params
         # compute reduced chisq
-        self.fit_stats['red chisq'],self.fit_stats['p-value']  = scipy.stats.chisquare(self.fit_stats['Best fit'],f_exp=self.ordinate)
+        self.fit_stats['red chisq'] = self.chisq(self.fit_stats['Param']) / dof
+        # compute p-value
+        self.fit_stats['p-value']  = scipy.stats.chi2.sf(self.chisq(self.fit_stats['Param']),dof)
         if self.data is not None:
-            dof = self.data.shape[0] - self.data.shape[1]
             # compute Akaike information criterion for normally distributed errors
             self.fit_stats['AIC'] = AIC_chisq(dof, self.fit_stats['red chisq'])
             # compute Akaike information criterion for small data sets
@@ -469,10 +472,13 @@ class CorrelatedLeastSquare(FitBase):
         self.fit_stats['Cov'] = cov_fit_param(self.abscissa,self.ordinate,self.ordinate_cov_inv,self.model,self.min_stats['x'],self.inv_acc)
         # compute and store the fit error
         self.fit_stats['Fit error'] = np.sqrt(np.diag(self.fit_stats['Cov']))
-        # compute reduced chisq and p-value
-        self.fit_stats['red chisq'],self.fit_stats['p-value']  = scipy.stats.chisquare(self.fit_stats['Best fit'],f_exp=self.ordinate)
+        # define the degrees of freedom
+        dof = len(self.abscissa)-self.model.num_params
+        # compute reduced chisq
+        self.fit_stats['red chisq'] = self.chisq(self.fit_stats['Param']) / dof
+        # compute p-value
+        self.fit_stats['p-value']  = scipy.stats.chi2.sf(self.chisq(self.fit_stats['Param']),dof)
         if self.data is not None:
-            dof = self.data.shape[0] - self.data.shape[1]
             # compute Akaike information criterion for normally distributed errors
             self.fit_stats['AIC'] = AIC_chisq(dof, self.fit_stats['red chisq'])
             # compute Akaike information criterion for small data sets

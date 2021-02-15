@@ -3,16 +3,6 @@ r"""
         * Uncorrelated Fit (Diagonal approximation) : DiagonalLeastSquare
         * Correlated Fit                            : CorrelatedLeastSquare
         * Correlated Fit with eigenmode shift       : CorrelatedLeastSquare_EigenmodeShift
-
-    ToDo:
-        * Implement non linear error estimation i.e. get covariance from
-          bootstrap over real data
-        * abstract the fit result output into an own class which automatically
-          determines required statistics s.t.
-            * x²
-            * bayschen
-            * covarianc
-            * error
 """
 import numpy as np
 import scipy.optimize as opt
@@ -218,9 +208,12 @@ class Sampled_DiagonalLeastSquare(FitBase):
         self.fit_stats['Cov'] = cov_fit_param(self.abscissa,self.ordinate_frozen,np.diag(np.divide(np.ones_like(self.ordinate_var_frozen),self.ordinate_var_frozen)),self.model,self.fit_stats['Param'])
         # store best fit data points evaluated over xdata
         self.fit_stats['Best fit'] = self.model(self.abscissa,*self.fit_stats['Param'])
+        # define the degrees of freedom
+        dof = len(self.abscissa)-self.model.num_params
         # compute reduced chisq
-        self.fit_stats['red chisq'],self.fit_stats['p-value']  = scipy.stats.chisquare(self.fit_stats['Best fit'],f_exp=self.ordinate_frozen)
-        dof = self.data.shape[0] - self.data.shape[1]
+        self.fit_stats['red chisq'] = self.chisq(self.fit_stats['Param']) / dof
+        # compute p-value
+        self.fit_stats['p-value']  = scipy.stats.chi2.sf(self.chisq(self.fit_stats['Param']),dof)
         # compute Akaike information criterion for normally distributed errors
         self.fit_stats['AIC'] = AIC_chisq(dof, self.fit_stats['red chisq'])
         # compute Akaike information criterion for small data sets
@@ -530,9 +523,12 @@ class Sampled_CorrelatedLeastSquare(FitBase):
         self.fit_stats['Cov'] = cov_fit_param(self.abscissa,self.ordinate_frozen,self.ordinate_cov_inv_frozen,self.model,self.fit_stats['Param'])
         # store best fit data points evaluated over xdata
         self.fit_stats['Best fit'] = self.model(self.abscissa,*self.fit_stats['Param'])
+        # define the degrees of freedom
+        dof = len(self.abscissa)-self.model.num_params
         # compute reduced chisq
-        self.fit_stats['red chisq'],self.fit_stats['p-value']  = scipy.stats.chisquare(self.fit_stats['Best fit'],f_exp=self.ordinate_frozen)
-        dof = self.data.shape[0] - self.data.shape[1]
+        self.fit_stats['red chisq'] = self.chisq(self.fit_stats['Param']) / dof
+        # compute p-value
+        self.fit_stats['p-value']  = scipy.stats.chi2.sf(self.chisq(self.fit_stats['Param']),dof)
         # compute Akaike information criterion for normally distributed errors
         self.fit_stats['AIC'] = AIC_chisq(dof, self.fit_stats['red chisq'])
         # compute Akaike information criterion for small data sets
