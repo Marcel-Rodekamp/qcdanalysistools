@@ -102,8 +102,8 @@ def cov_fit_param(t_abscissa,t_ordinate,t_cov_inv,t_model,t_params,t_inv_acc=1e-
     res_l = res(cov_inv @ cov)
 
     if res_r > t_inv_acc:
-        raise ValueError(f"Matrix inverse of the fit parameter covariance matrix is not precise: residuum = {res_r}")
+        raise ValueError(f"Matrix right inverse of the fit parameter covariance matrix is not precise: residuum = {res_r}")
     if res_l > t_inv_acc:
-        raise ValueError(f"Matrix inverse of the fit parameter covariance matrix is not precise: residuum = {res_l}")
+        raise ValueError(f"Matrix left inverse of the fit parameter covariance matrix is not precise: residuum = {res_l}")
 
     return cov
