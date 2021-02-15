@@ -10,6 +10,10 @@ This python library aims to offer analysis tools for QCD Data
 ```    
 def effective_mass(t_correlator,t_initial_guess, t_analysis_type, **analysis_kwargs)
 ```
+* First order energy by `C(t) ~ A cosh((t-Nt/2)*E )`
+```
+def energy_firstorder( t_correlator, t_meff, t_A0, t_E0, t_fitter, t_fitter_params = dict(),  t_plateau_est_acc = 1e-4, t_plateau_area = 2)
+```
 
 ### Minor Tools
 
