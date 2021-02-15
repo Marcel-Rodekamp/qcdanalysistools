@@ -20,7 +20,6 @@ import scipy.stats
 import itertools
 from .fitting_base import FitBase
 from .fitting_helpers import * # cov,cor,cov_fit_param
-from qcdanalysistools.stats import Q # p-value
 from qcdanalysistools.stats import AIC_chisq, AICc_chisq
 
 class Sampled_DiagonalLeastSquare(FitBase):
