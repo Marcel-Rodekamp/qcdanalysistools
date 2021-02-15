@@ -300,7 +300,7 @@ def jackknife(t_data, t_params, t_obs = np.average, **obs_kwargs):
         from ..Blocking import get_block
         from ..analysisParams import BlockingParams
 
-        bl_params = BlockingParams(t_data.shape[0],t_params.num_blocks)
+        bl_params = BlockingParams(t_params.data_size,t_params.num_blocks)
 
         l_est = [None]*bl_params.num_blocks
         l_var = [None]*bl_params.num_blocks
