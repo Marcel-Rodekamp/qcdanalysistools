@@ -88,16 +88,18 @@ def energy_firstorder( t_correlator, t_meff, t_A0, t_E0, t_fitter, t_fitter_para
     t_correlator = symmetrize(t_correlator)
 
     # 2. Estimate start plateau
+    # ToDo This is not a very robust way of finding a plateau, a more sophisticated way
+    #      should come at some point!
     t0 = 0
     te = Nt//2
     for t in range(Nt//2-2):
-        if (np.abs(t_meff[t] - t_meff[t+1])/(t_meff[t+1] - t_meff[t+2])) - 1. < t_plateau_est_acc:
+        if np.abs((t_meff[t] - t_meff[t+1])/(t_meff[t+1] - t_meff[t+2]) - 1.) < t_plateau_est_acc:
             t0 = t
             break
 
     # 3. Estimate end plateau
     for t in range(Nt//2-3,0,-1):
-        if (np.abs(t_meff[t+2] - t_meff[t+1])/(t_meff[t+1] - t_meff[t])) - 1. < t_plateau_est_acc:
+        if np.abs((t_meff[t+2] - t_meff[t+1])/(t_meff[t+1] - t_meff[t]) - 1.) < t_plateau_est_acc:
             te = t
             break
 
