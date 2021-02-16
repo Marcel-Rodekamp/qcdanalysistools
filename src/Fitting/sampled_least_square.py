@@ -9,7 +9,7 @@ import scipy.optimize as opt
 import scipy.stats
 import itertools
 from .fitting_base import FitBase
-from .fitting_helpers import * # cov,cor,cov_fit_param
+from .fitting_helpers import * # cov,cor,cov_fit_param,cov_fit_param_est
 from qcdanalysistools.stats import AIC_chisq, AICc_chisq
 
 class Sampled_DiagonalLeastSquare(FitBase):
@@ -205,7 +205,8 @@ class Sampled_DiagonalLeastSquare(FitBase):
         # compute and store the fit error from the sampling
         self.fit_stats['Fit sampled error'] = np.sqrt(np.var(param_per_sample,axis=0))
         # artificially compute the covariance matrix of the parameter from the backed up data
-        self.fit_stats['Cov'] = cov_fit_param(self.abscissa,self.ordinate_frozen,np.diag(np.divide(np.ones_like(self.ordinate_var_frozen),self.ordinate_var_frozen)),self.model,self.fit_stats['Param'])
+        # estimate the covariance with <Theta_i Theta_j> - <Theta_i><Theta_j>
+        self.fit_stats['Cov'] = cov_fit_param_est(param_per_sample,t_analysis_params=None)
         # compute and store the fit error
         self.fit_stats['Fit error'] = np.sqrt(np.diag(self.fit_stats['Cov']))
         # store best fit data points evaluated over xdata
@@ -522,7 +523,7 @@ class Sampled_CorrelatedLeastSquare(FitBase):
         # compute and store the fit error from the sampling
         self.fit_stats['Fit sampled error'] = np.sqrt(np.var(param_per_sample,axis=0))
         # artificially compute the covariance matrix of the parameter from the backed up data
-        self.fit_stats['Cov'] = cov_fit_param(self.abscissa,self.ordinate_frozen,self.ordinate_cov_inv_frozen,self.model,self.fit_stats['Param'],self.inv_acc)
+        self.fit_stats['Cov'] = cov_fit_param_est(param_per_sample,t_analysis_params=None)
         # compute and store the fit error
         self.fit_stats['Fit error'] = np.sqrt(np.diag(self.fit_stats['Cov']))
         # store best fit data points evaluated over xdata

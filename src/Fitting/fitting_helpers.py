@@ -107,3 +107,31 @@ def cov_fit_param(t_abscissa,t_ordinate,t_cov_inv,t_model,t_params,t_inv_acc=1e-
         raise ValueError(f"Matrix left inverse of the fit parameter covariance matrix is not precise: residuum = {res_l}")
 
     return cov
+
+def cov_fit_param_est(t_param_data,t_analysis_params):
+    r"""
+        t_param_data: np.ndarray
+            Parameters obtained from each sample.
+            It is assumed that
+    """
+
+    def cov_est(t_param_data):
+        cov = np.zeros(shape=(t_param_data.shape[1],t_param_data.shape[1]))
+
+        for i,j in itertools.product(range(t_param_data.shape[1]),repeat=2):
+            cov[i,j] = np.average( t_param_data[:,i] * t_param_data[:,j] ) \
+                     - np.average( t_param_data[:,i])* np.average( t_param_data[:,j])
+
+        return cov
+
+    if t_analysis_params is None:
+        return cov_est(t_param_data)
+
+    if t_analysis_params.analysis_type == "jackknife":
+        from ..analysis.Jackknife import est
+    elif t_analysis_params.analysis_type == "bootstrap":
+        from ..analysis.Bootstrap import est
+    elif t_analysis_params.analysis_type == "blocking":
+        from ..analysis.Blocking import est
+
+    return est(t_data = t_param_data , t_params = t_analysis_params, t_obs = cov_est)
