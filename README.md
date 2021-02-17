@@ -70,14 +70,22 @@ def AIC_weights(t_AICs)
 
 ## Requirements
 
+* `scipy`
+* `itertools`
+* `warnings`
+* `pathlb`
 * `numpy`
 * `matplotlib.pyplot`
-* lmfit
+* `aff` USQCDs python aff library (Optional)
+    * only required if `qcdanalysistools.fileIO.aff` is used.
+    * needs to be installed beforehand
 
 ## Installation
 
 ```
-python setup.py install (requires sudo)
+python setup.py install --user
+or
+sudo python setup.py install
 ```
 
 ## Licenses

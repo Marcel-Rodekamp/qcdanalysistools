@@ -16,6 +16,8 @@ setup(
             "qcdanalysistools.observables": "src/Observables",
             "qcdanalysistools.stats": "src/Stats",
             "qcdanalysistools.fitting": "src/Fitting",
+            "qcdanalysistools.fileIO": "src/FileIO",
+                "qcdanalysistools.fileIO.affIO": "src/FileIO/affIO",
     },
     packages = [
         "qcdanalysistools",
@@ -26,6 +28,8 @@ setup(
         "qcdanalysistools.observables",
         "qcdanalysistools.stats",
         "qcdanalysistools.fitting",
+        "qcdanalysistools.fileIO",
+            "qcdanalysistools.fileIO.affIO",
     ],
 #    scripts=[],
 )
