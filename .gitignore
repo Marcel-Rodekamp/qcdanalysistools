@@ -3,3 +3,6 @@ results/
 test/Fitting/read_aff.py
 test/Fitting/test_Correlated_fit.py
 test/Fitting/__pycache__
+QCD_Data_Analysis_Tools.egg-info/
+dist/
+analysis_tools/
