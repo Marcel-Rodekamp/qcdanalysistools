@@ -95,6 +95,64 @@ class MonomialModel(ModelBase):
         # thus the inconvenient return code here.
         return np.array([[np.zeros(shape=t_x.shape)]])
 
+class ExponentialModel(ModelBase):
+    def __init__(self,t_A0,t_B0):
+        r"""
+            t_A0: float
+                Initial guess of the scaling parameter
+            t_B0: float
+                Initial guess of exponent parameter
+
+            Exponential model:
+                $$
+                f(t,A,E) = A \cdot e^{- x \cdot B}
+                $$
+        """
+        super().__init__(t_num_params = 2, t_params0 = (t_A0,t_B0,), t_param_names = ("A","B"))
+
+    def apply(self,t_x,t_A,t_B):
+        r"""
+            t_A: float
+                Scaling parameter
+            t_B: float
+                Exponent parameter
+        """
+
+        return t_A * np.exp(- t_x * t_B)
+
+    def grad_param(self,t_x,t_A,t_B):
+        r"""
+            t_A: float
+                Scaling parameter
+            t_B: float
+                Exponent parameter
+        """
+
+        dA = np.exp(-t_x * t_B)
+
+        dB = -t_x*t_A*np.exp(-t_x*t_B)
+
+        return np.array([dA,dB])
+
+
+    def hess_param(self,t_x,t_A,t_B):
+        r"""
+            t_A: float
+                Scaling parameter
+            t_B: float
+                Exponent parameter
+        """
+
+        dA2 = np.zeros_like(t_x)
+        dB2 = t_x**2 * t_A * np.exp(-t_x*t_B)
+        dAdB = -t_x * np.exp(-t_x*t_B) # = dBdA
+
+        return np.array( [ [dA2,dAdB],[dAdB,dB2] ] )
+
+    def __name__(self):
+        return f"f(x,A,B) = A*exp( -x*B )"
+
+
 class FirstEnergyCoshModel(ModelBase):
     def __init__(self,t_A0,t_E0,t_Nt):
         r"""
