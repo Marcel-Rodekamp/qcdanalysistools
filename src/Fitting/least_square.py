@@ -74,6 +74,8 @@ class DiagonalLeastSquare(FitBase):
             if len(t_ordinate_var.shape) != 1:
                 raise ValueError(f"t_ordinate_var must be 1-dimensional but is of shape {t_ordinate_var.shape}")
 
+            self.data = None
+
             self.ordinate_var = t_ordinate_var
         else:
             # If t_data is given but the ordinate variance is not determine the
