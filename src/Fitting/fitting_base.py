@@ -113,7 +113,7 @@ class FitBase():
 
         # Check that ordinate and abscissa extend match
         if self.abscissa.size != self.ordinate.size:
-            raise ValueError(f"Abscissa size ({self.abscissa.size}) and ordinate size ({self.ordninate.size}) must match!")
+            raise ValueError(f"Abscissa size ({self.abscissa.size}) and ordinate size ({self.ordinate.size}) must match!")
 
         # store the report from the minimization procedure i.e. scipy.optimize.OptimizeResult
         self.min_stats = dict()
