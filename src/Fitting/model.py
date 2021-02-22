@@ -152,6 +152,47 @@ class ExponentialModel(ModelBase):
     def __name__(self):
         return f"f(x,A,B) = A*exp( -x*B )"
 
+class PropInversModel(ModelBase):
+    def __init__(self,t_A0):
+        r"""
+            t_A0: float
+                Initial guess of the proportionality parameter
+
+            Proportional to an inverse function model:
+                $$
+                f(t,A) = A / x
+                $$
+        """
+        super().__init__(t_num_params = 1, t_params0 = (t_A0,), t_param_names = ("A",))
+
+    def apply(self,t_x,t_A):
+        r"""
+            t_A: float
+                Scaling parameter
+        """
+
+        return t_A / t_x
+
+    def grad_param(self,t_x,t_A):
+        r"""
+            t_A: float
+                Scaling parameter
+        """
+        
+        return np.array([1/t_x])
+
+    def hess_param(self,t_x,t_A):
+        r"""
+            t_A: float
+                Scaling parameter
+            t_B: float
+                Exponent parameter
+        """
+
+        return np.array( [ [ np.zeros_like(t_x) ] ] )
+
+    def __name__(self):
+        return f"f(x,A) = A/x"
 
 class FirstEnergyCoshModel(ModelBase):
     def __init__(self,t_A0,t_E0,t_Nt):
