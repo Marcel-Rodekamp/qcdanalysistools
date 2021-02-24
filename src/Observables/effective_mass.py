@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.optimize import fsolve
+from ..analysis import estimator,variance
 
 def symmetrize(t_correlator):
     correlator = np.zeros(shape = (t_correlator.shape[0],t_correlator.shape[1]//2))
@@ -160,23 +161,13 @@ def effective_mass_log(t_correlator,t_analysis_params):
             #if np.any(x_t<0):
             #    print(f"t={t}: {np.nonzero(x_t<0)}")
 
-            m_eff[t] = np.average( np.log(np.abs(x_t)) )#/(t+0.5)
+            m_eff[t] = np.average(np.log(np.abs(x_t))) #/(t+0.5)
         return m_eff
-
-    if t_analysis_params.analysis_type == "jackknife":
-        from qcdanalysistools.analysis.Jackknife import jackknife as analysis
-    elif t_analysis_params.analysis_type == "bootstrap":
-        from qcdanalysistools.analysis.Bootstrap import bootstrap as analysis
-    elif t_analysis_params.analysis_type == "blocking":
-        from qcdanalysistools.analysis.Blocking import blocking as analysis
-    else:
-        raise ValueError(f"No such analysis type ({t_analysis_params.analysis_type})")
 
     if np.iscomplexobj(t_correlator):
         t_correlator = t_correlator.real
 
-    est, var = analysis(t_data  = t_correlator,
-                        t_params= t_analysis_params,
-                        t_obs   = effective_mass_obs)
+    m_eff_est = estimator(t_analysis_params,t_correlator,t_observable=effective_mass_obs)
+    m_eff_var = variance (t_analysis_params,t_correlator,t_observable=effective_mass_obs)
 
-    return est,var
+    return m_eff_est,m_eff_var
