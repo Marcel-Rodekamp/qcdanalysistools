@@ -1,5 +1,6 @@
 import numpy as np
 import itertools
+from ..analysis import estimator
 
 def res(A):
     return np.linalg.norm( A - np.identity(A.shape[0]) )
@@ -20,14 +21,7 @@ def cov(t_data,t_analysis_params=None):
     if t_analysis_params is None:
         return _cov(t_data)
     else:
-        if t_analysis_params.analysis_type == "jackknife":
-            from ..analysis.Jackknife import est
-        elif t_analysis_params.analysis_type == "bootstrap":
-            from ..analysis.Bootstrap import est
-        elif t_analysis_params.analysis_type == "blocking":
-            from ..analysis.Blocking import est
-
-        return est(t_data, t_analysis_params, t_obs = _cov)
+        return estimator(t_analysis_params,t_data,t_observable=_cov)
 
 def cor(t_data,t_analysis_params=None):
     r"""

@@ -11,6 +11,8 @@ import itertools
 from .fitting_base import FitBase
 from .fitting_helpers import * # cov,cor,cov_fit_param,cov_fit_param_est
 from qcdanalysistools.stats import AIC_chisq, AICc_chisq
+from ..analysis import estimator,variance,get_sample
+import warnings
 
 class Sampled_DiagonalLeastSquare(FitBase):
     def __init__(self,t_model,t_abscissa,t_data,t_analysis_params):
@@ -65,27 +67,7 @@ class Sampled_DiagonalLeastSquare(FitBase):
         # backup the average of the ordinate data for the statistics
         self.ordinate_frozen = self.ordinate
 
-        # compute the vairance of the ordinate data for the statistics
-        # and perform some preparations for the fit algorithm
-        if t_analysis_params.analysis_type == "bootstrap":
-            from qcdanalysistools.analysis.Bootstrap import var,subdataset
-            self.ordinate_var_frozen = var(self.data,self.analysis_params,axis=0)
-            self.num_samples = self.analysis_params.num_subdatasets
-            self.get_sample = lambda i_sample: subdataset(self.data,self.analysis_params)
-
-        elif t_analysis_params.analysis_type == "jackknife":
-            from qcdanalysistools.analysis.Jackknife import var,subdataset
-            self.ordinate_var_frozen = var(self.data,self.analysis_params,axis=0)
-            self.num_samples = self.analysis_params.num_subdatasets
-            self.get_sample = lambda i_sample: subdataset(self.data,i_sample,self.analysis_params)
-
-        elif t_analysis_params.analysis_type == "blocking":
-            from qcdanalysistools.analysis.Blocking import var,subdataset
-            self.ordinate_var_frozen = var(self.data,self.analysis_params,axis=0)
-            self.num_samples = self.analysis_params.num_blocks
-            self.get_sample = lambda i_sample: subdataset(self.data,i_sample,self.analysis_params)
-        else:
-            raise NotImplementedError(f"Sampled fitting is not implemented for analysis type {self.analysis_params.analysis_type}")
+        self.ordinate_var_frozen = estimator(self.analysis_params,self.data,t_observable=np.var)
 
     def chisq(self,params):
         r"""
@@ -170,11 +152,13 @@ class Sampled_DiagonalLeastSquare(FitBase):
             7. repeat for all samples
             8. Average results+statistics
         """
-        param_per_sample = np.zeros( shape = (self.num_samples,self.model.num_params) )
-        for i_sample in range(self.num_samples):
-            print(f"Fitting on Sample: {i_sample}/{self.num_samples}")
+        param_per_sample = np.zeros( shape = (self.analysis_params.num_samples(),self.model.num_params) )
+
+        #ToDo: How to blocking?
+        for i_sample in range(self.analysis_params.num_samples()):
+            print(f"Fitting on Sample: {i_sample}/{self.analysis_params.num_samples()}")
             # 1. Draw subdata set
-            l_data = self.get_sample(i_sample)
+            l_data = get_sample(self.analysis_params,self.data,t_k=i_sample)
 
             #2. compute ordinate and variance
             self.ordinate = np.average(l_data,axis=0)
@@ -202,8 +186,6 @@ class Sampled_DiagonalLeastSquare(FitBase):
         # 5. Get fit statistics
         # store the best fit parameter
         self.fit_stats['Param'] = np.average(param_per_sample,axis=0)
-        # compute and store the fit error from the sampling
-        self.fit_stats['Fit sampled error'] = np.sqrt(np.var(param_per_sample,axis=0))
         # artificially compute the covariance matrix of the parameter from the backed up data
         # estimate the covariance with <Theta_i Theta_j> - <Theta_i><Theta_j>
         self.fit_stats['Cov'] = cov_fit_param_est(param_per_sample,t_analysis_params=None)
@@ -231,7 +213,7 @@ class Sampled_DiagonalLeastSquare(FitBase):
         out_str+= "=======================================\n"
         out_str+= "========= Best Fit Parameter: =========\n"
         for i_param in range(self.model.num_params):
-            out_str+=f"{self.model.param_names[i_param]} = {self.fit_stats['Param'][i_param]:.6e} \u00B1 {self.fit_stats['Fit error'][i_param]:.6e} ({self.fit_stats['Fit sampled error'][i_param]:.6e} : sample)\n"
+            out_str+=f"{self.model.param_names[i_param]} = {self.fit_stats['Param'][i_param]:.6e} \u00B1 {self.fit_stats['Fit error'][i_param]:.6e}\n"
 
         out_str+= "========= Best Fit Covariance: ========\n"
         for i in range(self.model.num_params):
@@ -321,7 +303,7 @@ class Sampled_CorrelatedLeastSquare(FitBase):
         try:
             self.ordinate_cov_inv_frozen = np.linalg.inv(self.ordinate_cov_frozen)
         except:
-            print(f"WARNING: Require SVD to invert covariance matrix.")
+            warnings.warn(f"WARNING: Require SVD to invert covariance matrix.")
             u,w,v = np.linalg.svd(self.ordinate_cov_frozen)
             self.ordinate_cov_inv_frozen = np.dot(np.dot(np.transpose(v),np.diag(np.divide(np.ones(w.size),w,out=np.zeros(w.size),where=w<self.inv_acc**2))),np.transpose(u))
 
@@ -347,24 +329,6 @@ class Sampled_CorrelatedLeastSquare(FitBase):
         else:
             self.ordinate_cov = None
             self.ordinate_cov_inv = None
-
-        # and perform some preparations for the fit algorithm
-        if t_analysis_params.analysis_type == "bootstrap":
-            from qcdanalysistools.analysis.Bootstrap import subdataset
-            self.num_samples = self.analysis_params.num_subdatasets
-            self.get_sample = lambda i_sample: subdataset(self.data,self.analysis_params)
-
-        elif t_analysis_params.analysis_type == "jackknife":
-            from qcdanalysistools.analysis.Jackknife import subdataset
-            self.num_samples = self.analysis_params.num_subdatasets
-            self.get_sample = lambda i_sample: subdataset(self.data,i_sample,self.analysis_params)
-
-        elif t_analysis_params.analysis_type == "blocking":
-            from qcdanalysistools.analysis.Blocking import subdataset
-            self.num_samples = self.analysis_params.num_blocks
-            self.get_sample = lambda i_sample: subdataset(self.data,i_sample,self.analysis_params)
-        else:
-            raise NotImplementedError(f"Sampled fitting is not implemented for analysis type {self.analysis_params.analysis_type}")
 
     def res(self,A):
         r"""
@@ -464,11 +428,14 @@ class Sampled_CorrelatedLeastSquare(FitBase):
             7. repeat for all samples
             8. Average results+statistics
         """
-        param_per_sample = np.zeros( shape = (self.num_samples,self.model.num_params) )
-        for i_sample in range(self.num_samples):
-            print(f"Fitting for sample: {i_sample}/{self.num_samples}")
+        param_per_sample = np.zeros( shape = (self.analysis_params.num_samples(),self.model.num_params) )
+
+        #ToDo: How to blocking?
+        for i_sample in range(self.analysis_params.num_samples()):
+            print(f"Fitting for sample: {i_sample}/{self.analysis_params.num_samples()}")
+
             # 1. Draw subdata set
-            l_data = self.get_sample(i_sample)
+            l_data = get_sample(self.analysis_params,self.data,t_k=i_sample)
 
             #2. compute ordinate
             self.ordinate = np.average(l_data,axis=0)
@@ -485,7 +452,7 @@ class Sampled_CorrelatedLeastSquare(FitBase):
                 try:
                     self.ordinate_cov_inv = np.linalg.inv(self.ordinate_cov)
                 except:
-                    print(f"WARNING: Require SVD to invert covariance matrix.")
+                    warnings.warn(f"WARNING: Require SVD to invert covariance matrix.")
                     u,w,v = np.linalg.svd(self.ordinate_cov)
                     self.ordinate_cov_inv = np.dot(np.dot(np.transpose(v),np.diag(np.divide(np.ones(w.size),w,out=np.zeros(w.size),where=w<self.inv_acc**2))),np.transpose(u))
 
@@ -502,7 +469,7 @@ class Sampled_CorrelatedLeastSquare(FitBase):
 
             # Warn if no minimization method succeeded
             if len(min_res_list) == 0:
-                raise RuntimeWarning(f"No minimization technique worked for fitting sample {i_sample}. Try using different start parameters.")
+                warnings.warn(f"No minimization technique worked for fitting sample {i_sample}. Try using different start parameters.")
                 continue
 
             # 6. find the smallest chisq of all algorithms
@@ -520,8 +487,6 @@ class Sampled_CorrelatedLeastSquare(FitBase):
         # 5. Get fit statistics
         # store the best fit parameter
         self.fit_stats['Param'] = np.average(param_per_sample,axis=0)
-        # compute and store the fit error from the sampling
-        self.fit_stats['Fit sampled error'] = np.sqrt(np.var(param_per_sample,axis=0))
         # artificially compute the covariance matrix of the parameter from the backed up data
         self.fit_stats['Cov'] = cov_fit_param_est(param_per_sample,t_analysis_params=None)
         # compute and store the fit error
@@ -548,7 +513,7 @@ class Sampled_CorrelatedLeastSquare(FitBase):
         out_str+= "=======================================\n"
         out_str+= "========= Best Fit Parameter: =========\n"
         for i_param in range(self.model.num_params):
-            out_str+=f"{self.model.param_names[i_param]} = {self.fit_stats['Param'][i_param]:.6e} \u00B1 {self.fit_stats['Fit error'][i_param]:.6e} ({self.fit_stats['Fit sampled error'][i_param]:.6e} : sample)\n"
+            out_str+=f"{self.model.param_names[i_param]} = {self.fit_stats['Param'][i_param]:.6e} \u00B1 {self.fit_stats['Fit error'][i_param]:.6e} \n"
 
         out_str+= "========= Best Fit Covariance: ========\n"
         for i in range(self.model.num_params):

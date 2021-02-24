@@ -7,6 +7,8 @@ import scipy.optimize as opt
 import itertools
 import warnings
 
+from ..analysis import estimator
+
 class FitBase():
     def __init__(self,t_model,t_abscissa,t_data=None,t_ordinate=None,t_analysis_params=None):
         r"""
@@ -88,18 +90,10 @@ class FitBase():
             self.data = t_data
 
             if t_ordinate is None:
-                if t_analysis_params is None:
+                if t_analysis_params is None: # ToDo: This should be available within ..analysis
                     # fallback to standard average if no analysis method is given
                     self.ordinate = np.average(self.data,axis=0)
-                elif t_analysis_params.analysis_type == "bootstrap":
-                    from qcdanalysistools.analysis.Bootstrap import est
-                    self.ordinate = est(self.data,self.analysis_params,axis=0)
-                elif t_analysis_params.analysis_type == "jackknife":
-                    from qcdanalysistools.analysis.Jackknife import est
-                    self.ordinate = est(self.data,self.analysis_params,axis=0)
-                elif t_analysis_params.analysis_type == "blocking":
-                    from qcdanalysistools.analysis.Blocking import est
-                    self.ordinate = est(self.data,self.analysis_params,axis=0)
+                self.ordinate = estimator(t_analysis_params,self.data)
             else:
                 # if the data is given and also the ordinate, store it
                 if len(t_ordinate.shape) != 1:
