@@ -53,10 +53,6 @@ class AnalysisParam(dict):
 
             self._checkType('N_blk',int)
 
-            if self.get('N_blk') == self.get('data_size'):
-                raise ValueError("Blocking does not work with 'data_size' = 'N_blk'. Please choose 'N_blk'<'data_size'.")
-
-
             # set block_size
             self.__setitem__('blk_size', self.get('data_size')//self.get('N_blk'))
 
@@ -89,10 +85,6 @@ class AnalysisParam(dict):
 
             self._checkType('N_blk',int)
 
-            if self.get('N_blk') == self.get('data_size'):
-                raise ValueError("Blocking does not work with 'data_size' = 'N_blk'. Please choose 'N_blk'<'data_size'.")
-
-
             # set block_size
             self.__setitem__('blk_size', self.get('data_size')//self.get('N_blk'))
 
@@ -101,9 +93,6 @@ class AnalysisParam(dict):
             raise AttributeError(f"Didn't find 'N_blk' required for {self.__name__()}")
         else:
             self._checkType('N_blk',int)
-
-        if self.get('N_blk') == self.get('data_size'):
-            raise ValueError("Blocking does not work with 'data_size' = 'N_blk'. Please choose 'N_blk'<'data_size'.")
 
         # set block_size
         self.__setitem__('blk_size', self.get('data_size')//self.get('N_blk'))
@@ -126,7 +115,6 @@ class AnalysisParam(dict):
             self._blk_init(**kwargs)
         else:
             raise ValueError(f"Unknown AnalysisType: {self.AnalysisType}")
-
 
     def __getitem__(self, key):
         return super(AnalysisParam,self).__getitem__(key)
@@ -167,6 +155,16 @@ class AnalysisParam(dict):
     def __name__(self):
         return f"AnalysisParam[{self.AnalysisType.__name__}]"
 
+    def num_samples(self):
+        if checkAnalysisType(self.AnalysisType,Bootstrap):
+            return self.get('N_bst')
+        elif checkAnalysisType(self.AnalysisType,Jackknife):
+            return self.get('data_size')
+        elif checkAnalysisType(self.AnalysisType,Blocking):
+            return self.get('N_blk')
+        else:
+            raise NotImplementedError
+
 def get_sample(t_param,t_data,t_k,t_blk_k=None,t_axis=0):
     def _get_bst_sample(t_data):
         sample = np.take(
@@ -183,7 +181,9 @@ def get_sample(t_param,t_data,t_k,t_blk_k=None,t_axis=0):
                     except:
                         sample_group = h5f[f"blocking_id_{t_blk_k}"]
 
-                sample_group.create_dataset(f"{t_k}",data=sample)
+                        sample_group.create_dataset(f"{t_k}",data=sample)
+                else:
+                    h5f.create_dataset(f"{t_k}",data=sample)
 
         return sample
 
@@ -234,8 +234,8 @@ def get_sample(t_param,t_data,t_k,t_blk_k=None,t_axis=0):
     if checkAnalysisType(t_param.AnalysisType,Blocking):
             return _get_blk_sample(t_data=t_data,t_k=t_k)
 
-def estimator(t_param,t_data,t_observable=None,t_axis=0,**kwargs):
-    def use_blocking_est(N_blk,K):
+def estimator(t_param,t_data,t_observable=np.average,t_axis=0,**kwargs):
+    def _use_blocking_est(N_blk,K):
         estimators = [[None]*K]*N_blk
 
         for k_blk,k in itertools.product(range(N_blk),range(K)):
@@ -247,19 +247,15 @@ def estimator(t_param,t_data,t_observable=None,t_axis=0,**kwargs):
                 t_axis  = t_axis
             )
 
-            if t_observable is None:
-                estimators[k_blk][k] = np.average(sample,axis=t_axis)
-            else:
-                obs = t_observable(sample,**kwargs)
-                if np.isscalar(obs):
-                    estimators[k_blk][k] = obs
-                else:
-                    estimators[k_blk][k] = np.average(t_observable(sample,**kwargs),axis=t_axis)
+            try:
+                estimators[k_blk][k] = t_observable(sample,axis=t_axis,**kwargs)
+            except TypeError:
+                estimators[k_blk][k] = t_observable(sample,**kwargs)
 
         # average over all blocking and bootstrap
         return np.average(np.average(estimators,axis=1),axis=0)
 
-    def est(K):
+    def _est(K):
         estimators = [None]*K
 
         for k in range(K):
@@ -270,40 +266,25 @@ def estimator(t_param,t_data,t_observable=None,t_axis=0,**kwargs):
                 t_axis  = t_axis
             )
 
-            if t_observable is None:
-                estimators[k] = np.average(sample,axis=t_axis)
-            else:
-                obs = t_observable(sample,**kwargs)
-                if np.isscalar(obs):
-                    estimators[k] = obs
-                else:
-                    estimators[k] = np.average(obs,axis=t_axis)
+            try:
+                estimators[k] = t_observable(sample,axis=t_axis,**kwargs)
+            except TypeError:
+                estimators[k] = t_observable(sample,**kwargs)
 
         # average over all blocking and bootstrap
         return np.average(estimators,axis=0)
 
-    if checkAnalysisType(t_param.AnalysisType, Blocking):
-        return est(t_param['N_blk'])
-    elif checkAnalysisType(t_param.AnalysisType,Bootstrap):
-        if t_param['use_blocking']:
-            return use_blocking_est(t_param['N_blk'],t_param['N_bst'])
-        else:
-            return est(t_param['N_bst'])
-    elif checkAnalysisType(t_param.AnalysisType,Jackknife):
-        if t_param['use_blocking']:
-            return use_blocking_est(t_param['N_blk'],t_param['N_jak'])
-        else:
-            return est(t_param['N_jak'])
+    if t_param.get('use_blocking',False):
+        return _use_blocking_est(t_param['N_blk'],t_param.num_samples())
     else:
-        raise NotImplementedError(f"Estimator not implemented for t_param.AnalysisType = {t_param.AnalysisType}")
+        return _est(t_param.num_samples())
 
-
-def variance(t_param,t_data,t_observable=None,t_axis=0,**kwargs):
-    def use_blocking_var(N_blk,K):
+def variance(t_param,t_data,t_observable=np.average,t_axis=0,**kwargs):
+    def _use_blocking_var(N_blk,K):
         # Creat matrix to store the by block and bootstrap sample estimators
         # we may not know which dimensionality comes out of t_obs thus we
         # need to use python built=in list and append
-        variances = [[None]*K]*N_blk
+        estimators = [[None]*K]*N_blk
 
         for k_blk,k in itertools.product(range(N_blk),range(K)):
             sample = get_sample(
@@ -314,24 +295,23 @@ def variance(t_param,t_data,t_observable=None,t_axis=0,**kwargs):
                 t_axis  = t_axis
             )
 
-            if t_observable is None:
-                variances[k_blk][k] = np.var(sample,axis=t_axis)
-            else:
-                obs_var = np.var(t_observable(sample,**kwargs),axis=t_axis)
+            try:
+                estimators[k_blk][k] = t_observable(sample,axis=t_axis,**kwargs)
+            except TypeError:
+                estimators[k_blk][k] = t_observable(sample,**kwargs)
 
-                if np.isscalar(obs_var):
-                    variances[k_blk][k] = obs_var
-                else:
-                    variances[k_blk][k] = np.average(obs_var,axis=t_axis)
+        # compute the variance on analysis samples
+        variances = np.var(estimators,axis=1)
+        # average the variance over the blocks
+        variances = np.average(variances,axis=0)
 
-        # average over all blocking and bootstrap
-        return np.average(np.average(variances,axis=1),axis=0)
+        return variances
 
-    def var(K):
+    def _var(K):
         # Creat vector to store the by bootstrap sample estimators
         # we may not know which dimensionality comes out of t_obs thus we
         # need to use python built=in list and append
-        variances = [None]*K
+        estimators = [None]*K
 
         for k in range(K):
             sample = get_sample(
@@ -341,30 +321,63 @@ def variance(t_param,t_data,t_observable=None,t_axis=0,**kwargs):
                 t_axis  = t_axis
             )
 
-            if t_observable is None:
-                variances[k] = np.var(sample,axis=t_axis)
-            else:
-                obs_var = np.var(t_observable(sample,**kwargs),axis=t_axis)
+            try:
+                estimators[k] = t_observable(sample,axis=t_axis,**kwargs)
+            except TypeError:
+                estimators[k] = t_observable(sample,**kwargs)
 
-                if np.isscalar(obs_var):
-                    variances[k] = obs_var
-                else:
-                    variances[k] = np.average(obs_var,axis=t_axis)
+        return np.var(estimators,axis=0)
 
-        # average over all blocking and bootstrap
-        return np.average(variances,axis=0)
-
-    if checkAnalysisType(t_param.AnalysisType,Blocking):
-        return var(t_param['N_blk'])
-    elif checkAnalysisType(t_param.AnalysisType,Bootstrap):
-        if t_param['use_blocking']:
-            return use_blocking_var(t_param['N_blk'],t_param['N_bst'])
-        else:
-            return var(t_param['N_bst'])
-    elif checkAnalysisType(t_param.AnalysisType,Jackknife):
-        if t_param['use_blocking']:
-            return use_blocking_var(t_param['N_blk'],t_param['N_jak'])
-        else:
-            return var(t_param['N_jak'])
+    if t_param.get('use_blocking',False):
+        return _use_blocking_var(t_param['N_blk'],t_param.num_samples())
     else:
-        raise NotImplementedError(f"Variance not implemented for t_param.AnalysisType = {t_param.AnalysisType}")
+        return _var(t_param.num_samples())
+
+def dataAnalysis(t_param,t_data,t_observable=np.average,t_axis=0,**kwargs):
+    def _use_blocking_analysis(N_blk,K):
+        # Creat matrix to store the by block and bootstrap sample estimators
+        # we may not know which dimensionality comes out of t_obs thus we
+        # need to use python built=in list and append
+        estimators = [[None]*K]*N_blk
+
+        for k_blk,k in itertools.product(range(N_blk),range(K)):
+            sample = get_sample(
+                t_param = t_param,
+                t_data  = t_data ,
+                t_k     = k  ,
+                t_blk_k = k_blk  ,
+                t_axis  = t_axis
+            )
+
+            try:
+                estimators[k_blk][k] = t_observable(sample,axis=t_axis,**kwargs)
+            except TypeError:
+                estimators[k_blk][k] = t_observable(sample,**kwargs)
+
+        return np.average(np.average(estimators,axis=1),axis=0),np.average(np.var(estimators,axis=1),axis=0)
+
+    def _analysis(K):
+        # Creaet vector to store the by bootstrap sample estimators
+        # we may not know which dimensionality comes out of t_obs thus we
+        # need to use python built-in list and append
+        estimators = [None]*K
+
+        for k in range(K):
+            sample = get_sample(
+                t_param = t_param,
+                t_data  = t_data ,
+                t_k     = k      ,
+                t_axis  = t_axis
+            )
+
+            try:
+                estimators[k] = t_observable(sample,axis=t_axis,**kwargs)
+            except TypeError:
+                estimators[k] = t_observable(sample,**kwargs)
+
+        return np.average(estimators,axis=0), np.var(estimators,axis=0)
+
+    if t_param.get('use_blocking',False):
+        return _use_blocking_analysis(t_param['N_blk'],t_param.num_samples())
+    else:
+        return _analysis(t_param.num_samples())

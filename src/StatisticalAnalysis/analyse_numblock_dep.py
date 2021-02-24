@@ -1,6 +1,6 @@
 import qcdanalysistools.fitting as fitting
-from .. import BlockingParams
-from . import var
+from . import variance
+from . import Blocking,AnalysisParam
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -16,11 +16,11 @@ def analyse_numblock_dependency(t_data, t_Nbl_list, t_fn = "./blocking_analysis.
     var_per_Nbl = np.zeros(shape=(t_Nbl_list.shape[0],*t_data.shape[1:]))
 
     for i_bl,N_bl in enumerate(t_Nbl_list):
-        bl_params = BlockingParams(
-            t_data_size  = t_data.shape[0],
-            t_num_blocks = N_bl
+        bl_params = AnalysisParam(Blocking,
+            data_size  = t_data.shape[0],
+            N_blk      = N_bl
         )
-        var_per_Nbl[i_bl,:] = var(t_data,bl_params,axis=0)*t_var_factor
+        var_per_Nbl[i_bl,:] = variance(bl_params,t_data,t_axis=0)*t_var_factor
 
     # Fit the variance to A/num_blocks
     fit_model = fitting.PropInversModel(t_A0=1.7)
