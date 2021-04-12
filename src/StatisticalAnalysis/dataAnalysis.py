@@ -375,7 +375,11 @@ def dataAnalysis(t_param,t_data,t_observable=np.average,t_axis=0,**kwargs):
             except TypeError:
                 estimators[k] = t_observable(sample,**kwargs)
 
-        return np.average(estimators,axis=0), np.var(estimators,axis=0)
+        if checkAnalysisType(t_param.AnalysisType,Jackknife):
+            # use the correct normalization for the Jackknife variance
+            return np.average(estimators,axis=0), np.var(estimators,axis=0) * (t_param['data_size']-1)
+        else:
+            return np.average(estimators,axis=0), np.var(estimators,axis=0)
 
     if t_param.get('use_blocking',False):
         return _use_blocking_analysis(t_param['N_blk'],t_param.num_samples())
