@@ -1,6 +1,7 @@
 import numpy as np
 import itertools
 from ..analysis import estimator
+import warnings
 
 def res(A):
     return np.linalg.norm( A - np.identity(A.shape[0]) )
@@ -96,9 +97,9 @@ def cov_fit_param(t_abscissa,t_ordinate,t_cov_inv,t_model,t_params,t_inv_acc=1e-
     res_l = res(cov_inv @ cov)
 
     if res_r > t_inv_acc:
-        raise ValueError(f"Matrix right inverse of the fit parameter covariance matrix is not precise: residuum = {res_r}")
+        warnings.warn(f"Matrix right inverse of the fit parameter covariance matrix is not precise: residuum = {res_r:g}")
     if res_l > t_inv_acc:
-        raise ValueError(f"Matrix left inverse of the fit parameter covariance matrix is not precise: residuum = {res_l}")
+        warnings.warn(f"Matrix left inverse of the fit parameter covariance matrix is not precise: residuum = {res_l:g}")
 
     return cov
 
