@@ -10,9 +10,6 @@ setup(
     package_dir = {
         "qcdanalysistools": "src/",
             "qcdanalysistools.analysis": "src/StatisticalAnalysis",
-                "qcdanalysistools.analysis.Blocking": "src/StatisticalAnalysis/Blocking",
-                "qcdanalysistools.analysis.Jackknife": "src/StatisticalAnalysis/Jackknife",
-                "qcdanalysistools.analysis.Bootstrap": "src/StatisticalAnalysis/Bootstrap",
             "qcdanalysistools.observables": "src/Observables",
             "qcdanalysistools.stats": "src/Stats",
             "qcdanalysistools.fitting": "src/Fitting",
@@ -22,9 +19,6 @@ setup(
     packages = [
         "qcdanalysistools",
         "qcdanalysistools.analysis",
-            "qcdanalysistools.analysis.Blocking",
-            "qcdanalysistools.analysis.Jackknife",
-            "qcdanalysistools.analysis.Bootstrap",
         "qcdanalysistools.observables",
         "qcdanalysistools.stats",
         "qcdanalysistools.fitting",
