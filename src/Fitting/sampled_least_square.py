@@ -11,7 +11,7 @@ import itertools
 from .fitting_base import FitBase
 from .fitting_helpers import * # cov,cor,cov_fit_param,cov_fit_param_est
 from qcdanalysistools.stats import AIC_chisq, AICc_chisq
-from ..analysis import estimator,variance,get_sample
+from ..analysis import estimator,variance,resample,checkAnalysisType,Jackknife,Blocking,Bootstrap
 import warnings
 
 class Sampled_DiagonalLeastSquare(FitBase):
@@ -298,7 +298,10 @@ class Sampled_CorrelatedLeastSquare(FitBase):
         self.ordinate_frozen = self.ordinate
 
         # compute the covairance of the ordinate data for the statistics
-        self.ordinate_cov_frozen = cov(self.data,self.analysis_params)
+        if checkAnalysisType(self.analysis_params.AnalysisType,Jackknife):
+            self.ordinate_cov_frozen = np.cov(self.data,rowvar=False)*(self.analysis_params['data_size'] - 1)**2/self.analysis_params['data_size']
+        else:
+            self.ordinate_cov_frozen = np.cov(self.data,rowvar=False)
 
         try:
             self.ordinate_cov_inv_frozen = np.linalg.inv(self.ordinate_cov_frozen)
@@ -349,13 +352,14 @@ class Sampled_CorrelatedLeastSquare(FitBase):
                 where $\Theta$ denotes the vector of parameters
         """
         # evaluate the model
-        model_res = self.model(self.abscissa,*params)
+        #model_res = self.model(self.abscissa,*params)
 
+        diff = self.ordinate - self.model(self.abscissa,*params)
+        xsq = diff @ self.ordinate_cov_inv @ diff
         # compute chisq
-        xsq = 0
-        for t1,t2 in itertools.product(range(self.abscissa.size),repeat=2):
-            xsq+=(self.ordinate[t1]-model_res[t1])*self.ordinate_cov_inv[t1,t2]*(self.ordinate[t2]-model_res[t2])
-
+        #xsq = 0
+        #for t1,t2 in itertools.product(range(self.abscissa.size),repeat=2):
+        #    xsq+=(self.ordinate[t1]-model_res[t1])*self.ordinate_cov_inv[t1,t2]*(self.ordinate[t2]-model_res[t2])
         return xsq
 
     def grad_chisq(self,params):
@@ -375,15 +379,9 @@ class Sampled_CorrelatedLeastSquare(FitBase):
         # evaluate the gradient of the model (i.r.t. the parameters)
         model_grad = self.model.grad_param(self.abscissa,*params)
 
-        # initialize memory for the gradient
-        xsq_grad = np.zeros(shape = self.model.num_params)
 
-        # compute the gradient
-        for i_param in range(self.model.num_params):
-            for t1,t2 in itertools.product(range(self.abscissa.size),repeat=2):
-                xsq_grad[i_param] -= 2*model_grad[i_param,t1]*self.ordinate_cov_inv[t1,t2]*(self.ordinate[t2]-model_res[t2])
-
-        return xsq_grad
+        chi2g = 2 * model_grad @ self.ordinate_cov_inv @ (model_res - self.ordinate)
+        return chi2g
 
     def hess_chisq(self,params):
         r"""
@@ -405,6 +403,8 @@ class Sampled_CorrelatedLeastSquare(FitBase):
         # evaluate the hessian of the model (i.r.t. the parameters)
         model_hess = self.model.hess_param(self.abscissa,*params)
 
+        #xsq_hess = 2 * ( model_hess @ self.ordinate_cov_inv @ (model_res-self.ordinate) \
+        #               + model_grad @ self.ordinate_cov_inv @ model_grad )
         # initialize memory for the hessian
         xsq_hess = np.zeros( shape=(self.model.num_params,self.model.num_params) )
 
@@ -430,15 +430,14 @@ class Sampled_CorrelatedLeastSquare(FitBase):
         """
         param_per_sample = np.zeros( shape = (self.analysis_params.num_samples(),self.model.num_params) )
 
-        #ToDo: How to blocking?
-        for i_sample in range(self.analysis_params.num_samples()):
-            print(f"Fitting for sample: {i_sample}/{self.analysis_params.num_samples()}")
+        # 1. Resample the data
+        l_data = resample(self.analysis_params,self.data)
 
-            # 1. Draw subdata set
-            l_data = get_sample(self.analysis_params,self.data,t_k=i_sample)
+        for i_sample in range(self.analysis_params.num_samples()):
+            #print(f"Fitting for sample: {i_sample}/{self.analysis_params.num_samples()}")
 
             #2. compute ordinate
-            self.ordinate = np.average(l_data,axis=0)
+            self.ordinate = l_data[i_sample]
 
             # we could allow to compute the covariance only once for the full
             # data set. This would reduce computational costs and increase stability
@@ -446,7 +445,7 @@ class Sampled_CorrelatedLeastSquare(FitBase):
             if not self.frozen_cov_flag:
                 #2.1 compute covariance
                 # use the function from qcdanalysistools.fitting.fitting_helpers
-                self.ordinate_cov = cov(l_data)
+                self.ordinate_cov = cov(l_data[i_sample])
 
                 # invert the covariance
                 try:
@@ -486,11 +485,15 @@ class Sampled_CorrelatedLeastSquare(FitBase):
 
         # 5. Get fit statistics
         # store the best fit parameter
-        self.fit_stats['Param'] = np.average(param_per_sample,axis=0)
+        self.fit_stats['Param'] = np.mean(param_per_sample,axis=0)
         # artificially compute the covariance matrix of the parameter from the backed up data
-        self.fit_stats['Cov'] = cov_fit_param_est(param_per_sample,t_analysis_params=None)
+        if checkAnalysisType(self.analysis_params.AnalysisType,Jackknife):
+            # Jackknife has a certain scaling on the variance
+            self.fit_stats['Cov'] = np.cov(param_per_sample,rowvar=0)*(self.analysis_params['data_size']-1)**2/self.analysis_params['data_size']
+        else:
+            self.fit_stats['Cov'] = np.cov(param_per_sample,rowvar=0)
         # compute and store the fit error
-        self.fit_stats['Fit error'] = np.sqrt(np.diag(self.fit_stats['Cov']))
+        self.fit_stats['Fit error'] = np.sqrt(np.diag(self.fit_stats['Cov'])) #np.sqrt(np.var(param_per_sample,axis=0) * (self.analysis_params['data_size'] - 1)**2 / self.analysis_params['data_size']) # #
         # store best fit data points evaluated over xdata
         self.fit_stats['Best fit'] = self.model(self.abscissa,*self.fit_stats['Param'])
         # define the degrees of freedom

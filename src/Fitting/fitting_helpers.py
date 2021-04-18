@@ -1,55 +1,12 @@
 import numpy as np
 import itertools
-from ..analysis import estimator
+from ..analysis import resample,estimator,checkAnalysisType
 import warnings
 
 def res(A):
     return np.linalg.norm( A - np.identity(A.shape[0]) )
 
-def cov(t_data,t_analysis_params=None):
-    r"""
-        t_data: numpy.ndarray
-            Represents the data over which the covariance matrix has to be determined
-            Require 2 dimensions e.g. shape = (#gauge,#Nt)
-        t_analysis_params: AnalysisParams, default: None
-            Specification of the analysis method. If set to `None` the covariance
-            matrix is estimated using np.cov. Else it is estimated using the
-            specified analysis method. e.g. bootstrap
-    """
-    def _cov(t_data):
-        return np.cov(t_data.T)
-
-    if t_analysis_params is None:
-        return _cov(t_data)
-    else:
-        return estimator(t_analysis_params,t_data,t_observable=_cov)
-
-def cor(t_data,t_analysis_params=None):
-    r"""
-        t_data: numpy.ndarray
-            Represents the data over which the covariance matrix has to be determined
-            Require 2 dimensions e.g. shape = (#gauge,#Nt)
-        t_analysis_params: AnalysisParams, default: None
-            Specification of the analysis method. If set to `None` the covariance
-            matrix is estimated using np.cov. Else it is estimated using the
-            specified analysis method. e.g. bootstrap
-    """
-    def _cor(t_data):
-        return np.corrcoef(t_data.T)
-
-    if t_analysis_params is None:
-        return _cor(t_data)
-    else:
-        if t_analysis_params.analysis_type == "jackknife":
-            from ..analysis.Jackknife import est
-        elif t_analysis_params.analysis_type == "bootstrap":
-            from ..analysis.Bootstrap import est
-        elif t_analysis_params.analysis_type == "blocking":
-            from ..analysis.Blocking import est
-
-        return est(t_data, t_analysis_params, t_obs = _cor)
-
-def cov_fit_param(t_abscissa,t_ordinate,t_cov_inv,t_model,t_params,t_inv_acc=1e-8):
+def cov_fit_param(t_abscissa,t_cov_inv,t_model,t_params,t_inv_acc=1e-8):
     r"""
         t_abscissa: numpy.array
             Axis above which the model becomes evaluated
@@ -102,31 +59,3 @@ def cov_fit_param(t_abscissa,t_ordinate,t_cov_inv,t_model,t_params,t_inv_acc=1e-
         warnings.warn(f"Matrix left inverse of the fit parameter covariance matrix is not precise: residuum = {res_l:g}")
 
     return cov
-
-def cov_fit_param_est(t_param_data,t_analysis_params):
-    r"""
-        t_param_data: np.ndarray
-            Parameters obtained from each sample.
-            It is assumed that
-    """
-
-    def cov_est(t_param_data):
-        cov = np.zeros(shape=(t_param_data.shape[1],t_param_data.shape[1]))
-
-        for i,j in itertools.product(range(t_param_data.shape[1]),repeat=2):
-            cov[i,j] = np.average( t_param_data[:,i] * t_param_data[:,j] ) \
-                     - np.average( t_param_data[:,i])* np.average( t_param_data[:,j])
-
-        return cov
-
-    if t_analysis_params is None:
-        return cov_est(t_param_data)
-
-    if t_analysis_params.analysis_type == "jackknife":
-        from ..analysis.Jackknife import est
-    elif t_analysis_params.analysis_type == "bootstrap":
-        from ..analysis.Bootstrap import est
-    elif t_analysis_params.analysis_type == "blocking":
-        from ..analysis.Blocking import est
-
-    return est(t_data = t_param_data , t_params = t_analysis_params, t_obs = cov_est)
