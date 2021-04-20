@@ -18,7 +18,7 @@ def checkAnalysisType(t_AnalysisType,t_desiredAnalysisType):
     return isinstance(t_AnalysisType(),t_desiredAnalysisType)
 
 class AnalysisParam(dict):
-    __slots__ = ('AnalysisType')
+    __slots__ = ('AnalysisType','bst_table')
 
     def _checkType(self,key,t_type):
         my_val = self.get(key)
@@ -56,9 +56,9 @@ class AnalysisParam(dict):
             # set block_size
             self.__setitem__('blk_size', self.get('data_size')//self.get('N_blk'))
 
-        self.bst_table = np.zeros(shape=( self.get('N_bst'), self.get('data_size')))
+        self.bst_table = np.zeros(shape=( self.get('N_bst'), self.get('data_size')), dtype=int)
         for k in range(self.get('N_bst')):
-            self.bst_table[k,:] = np.random.randint(0,high=t_data.shape[t_axis],shape=(t_data.shape[t_axis],))
+            self.bst_table[k,:] = np.random.randint(0,high=self.get('data_size'),size=self.get('data_size'))
 
 
         if 'store_bst_samples' not in kwargs:
@@ -105,6 +105,7 @@ class AnalysisParam(dict):
 
     def __init__(self,t_type,**kwargs):
         self.AnalysisType = t_type
+        self.bst_table = None
         super(AnalysisParam,self).__init__(**kwargs)
         #print(f"args passed = {kwargs}")
 
