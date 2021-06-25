@@ -4,6 +4,10 @@ import h5py as h5
 import pathlib
 import itertools
 
+# ==============================================================================
+# Parameter
+# ==============================================================================
+
 class Bootstrap:
     def __name__(self):
         return "Bootstrap"
@@ -63,7 +67,8 @@ class AnalysisParam(dict):
 
         if 'store_bst_samples' not in kwargs:
             self.setdefault('store_bst_samples', default=False)
-        else:
+
+        if self.get('store_bst_samples'):
             raise NotImplementedError
             if 'store_bst_samples_fn' not in kwargs:
                 self.setdefault('store_bst_samples_fn', pathlib.Path("./boostrap_samples.h5"))
@@ -84,7 +89,6 @@ class AnalysisParam(dict):
 
         if 'use_blocking' not in kwargs:
             self.setdefault('use_blocking', default=False)
-
         if self.get('use_blocking'):
             if 'N_blk' not in kwargs:
                 raise AttributeError(f"Didn't find 'N_blk' required for {self.__name__()} with 'use_blocking' set to True")
@@ -93,6 +97,9 @@ class AnalysisParam(dict):
 
             # set block_size
             self.__setitem__('blk_size', self.get('data_size')//self.get('N_blk'))
+
+            if self.get('N_jak') >= self.get('blk_size'):
+                raise AttributeError(f"Can not have N_jak ({self.get('N_jak')}) >= blk_size ({self.get('data_size')}), as it would delete all elements in a block.")
 
     def _blk_init(self,**kwargs):
         if 'N_blk' not in kwargs:
@@ -184,7 +191,7 @@ def get_sample(t_param,t_data,t_k,t_blk_k=None):
 
     def _get_jak_sample(t_data):
         sample = np.delete( t_data,
-                [t_k+i if t_k+i<t_param.get('data_size') else i for i in range(t_param.get('N_jak'))],
+                [t_k+i if t_k+i<t_data.shape[t_param['axis']] else i for i in range(t_param.get('N_jak'))],
                 axis=t_param['axis']
         )
 
@@ -192,7 +199,7 @@ def get_sample(t_param,t_data,t_k,t_blk_k=None):
 
     def _get_blk_sample(t_data,t_k):
         if t_k == t_param.get('N_blk') - 1:
-            sample = t_data.take(range(t_k*t_param['blk_size'],t_data.shape[t_axis]),axis=t_param['axis'])
+            sample = t_data.take(range(t_k*t_param['blk_size'],t_data.shape[t_param['axis']]),axis=t_param['axis'])
         else:
             sample = t_data.take(range(t_k*t_param['blk_size'],(t_k+1)*t_param['blk_size']),axis=t_param['axis'])
 
@@ -215,7 +222,7 @@ def get_sample(t_param,t_data,t_k,t_blk_k=None):
     # ==========================================================================
     if checkAnalysisType(t_param.AnalysisType,Jackknife):
         if t_param['use_blocking']:
-            return _get_jak_sample(t_data=_get_blk_sample(t_data=t_data,t_k=t_blk_k))
+            return _get_jak_sample(t_data= _get_blk_sample(t_data=t_data,t_k=t_blk_k))
         else:
             if t_blk_k is not None:
                 warnings.warn(f"You passed 't_blk_k' = {t_blk_k} to {t_param.__name__()}.get_sample without setting 'use_blocking' to True!")
@@ -263,7 +270,19 @@ def resample(t_param,t_data):
         #            0,t_param['axis']
         #        )
         #    return tmp
-        return np.array([np.mean(get_sample(t_param,t_data,k), axis=t_param['axis']) for k in range(t_param['data_size'])])
+        if t_param['use_blocking']:
+            return np.array([
+                np.mean(
+                    get_sample(t_param,t_data,k_jkn,t_blk_k=k_blk), axis=t_param['axis']
+                ) for k_jkn,k_blk in itertools.product(range(t_param['blk_size']),range(t_param['N_blk']))
+            ])
+        else:
+            return np.array([
+                np.mean(
+                    get_sample(t_param,t_data,k_jkn), axis=t_param['axis']
+                ) for k_jkn in range(t_param['data_size'])
+            ])
+
 
     def _blk_resample():
         return np.array([np.mean(get_sample(t_param,t_data,k), axis=t_param['axis']) for k in range(t_param['N_blk'])])
@@ -276,6 +295,9 @@ def resample(t_param,t_data):
     else:
         return _blk_resample()
 
+# ==============================================================================
+# Jackknife
+# ==============================================================================
 
 def _jackknife_est(t_param,t_data,t_observable=None,**obs_kwargs):
     N = t_param['data_size']
@@ -286,7 +308,6 @@ def _jackknife_est(t_param,t_data,t_observable=None,**obs_kwargs):
         obs = t_data
 
     jkn_data = resample(t_param,obs)
-
     return np.mean(jkn_data, axis = t_param['axis'])
 
 def _jackknife_var(t_param,t_data,t_observable=None,**obs_kwargs):
@@ -313,6 +334,10 @@ def _jackknife(t_param,t_data,t_observable=None,**obs_kwargs):
 
     return  np.mean( jkn_data, axis = t_param['axis'] ), \
             np.var( jkn_data, axis = t_param['axis'], ddof = 1) *((N-1)**2/N)
+
+# ==============================================================================
+# Bootstrap
+# ==============================================================================
 
 def _bootstrap_est(t_param,t_data,t_observable=None,**obs_kwargs):
     if t_observable is not None:
@@ -344,6 +369,44 @@ def _bootstrap(t_param,t_data,t_observable=None,**obs_kwargs):
 
     return np.mean(bst_data,axis=0), np.var(bst_data,axis=0)
 
+# ==============================================================================
+# Blocking
+# ==============================================================================
+
+def _blocking_est(t_param,t_data,t_observable=None,**obs_kwargs):
+    if t_observable is not None:
+        obs = t_observable(t_data,**obs_kwargs)
+    else:
+        obs = t_data
+
+    bst_data = resample(t_param,obs)
+
+    return np.mean(bst_data,axis=0)
+
+def _blocking_var(t_param,t_data,t_observable=None,**obs_kwargs):
+    if t_observable is not None:
+        obs = t_observable(t_data,**obs_kwargs)
+    else:
+        obs = t_data
+
+    bst_data = resample(t_param,obs)
+
+    return np.var(bst_data,axis=0)
+
+def _blocking(t_param,t_data,t_observable=None,**obs_kwargs):
+    if t_observable is not None:
+        obs = t_observable(t_data,**obs_kwargs)
+    else:
+        obs = t_data
+
+    bst_data = resample(t_param,obs)
+
+    return np.mean(bst_data,axis=0), np.var(bst_data,axis=0)
+
+# ==============================================================================
+# Single Interface
+# ==============================================================================
+
 def estimator(t_param,t_data,t_observable=None,**obs_kwargs):
     if checkAnalysisType(t_param.AnalysisType,Jackknife):
         return _jackknife_est(t_param,t_data,t_observable=t_observable, **obs_kwargs)
@@ -373,6 +436,10 @@ def variance(t_param,t_data,t_observable=None,**obs_kwargs):
             obs = t_data
 
         return np.var(obs, axis=t_param['axis'])
+
+# ==============================================================================
+# Combined interface
+# ==============================================================================
 
 def dataAnalysis(t_param,t_data,t_observable=None, **obs_kwargs):
     if checkAnalysisType(t_param.AnalysisType,Jackknife):
