@@ -6,3 +6,4 @@ test/Fitting/__pycache__
 QCD_Data_Analysis_Tools.egg-info/
 dist/
 analysis_tools/
+*.pyc
