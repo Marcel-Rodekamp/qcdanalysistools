@@ -341,5 +341,8 @@ class TestBootstrap(unittest.TestCase):
                 self.assertTrue(est - np.sqrt(var) < 0.5 or 0.5 < est + np.sqrt(var))
             print("done")
 
+    def testExponential(self):
+        pass 
+
 if __name__ == '__main__':
     unittest.main()
