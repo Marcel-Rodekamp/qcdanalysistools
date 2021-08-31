@@ -33,6 +33,8 @@ class AnalysisParam(dict):
                 raise ValueError(f"Can't convert '{key}' to {t_type}, you passed '{my_val}' of type {type(my_val)}")
 
     def write_to_h5(self,h5f):
+
+        h5f.create_dataset('bst_table',data=self.bst_table)
         grp = h5f.create_group("SampleParams")
 
         for key in self.keys():
@@ -69,7 +71,6 @@ class AnalysisParam(dict):
             self.setdefault('store_bst_samples', default=False)
 
         if self.get('store_bst_samples'):
-            raise NotImplementedError
             if 'store_bst_samples_fn' not in kwargs:
                 self.setdefault('store_bst_samples_fn', pathlib.Path("./boostrap_samples.h5"))
             else:
@@ -183,6 +184,10 @@ class AnalysisParam(dict):
         else:
             raise NotImplementedError
 
+    def iterate_samples(self):
+        # ToDo: Generalize for blocked bst/jkn
+        return range(self.num_samples())
+
 def get_sample(t_param,t_data,t_k,t_blk_k=None):
     def _get_bst_sample(t_data):
         sample = t_data.take(t_param.bst_table[t_k,:],axis=t_param['axis'])
@@ -294,6 +299,7 @@ def resample(t_param,t_data):
         return _jkn_resample()
     else:
         return _blk_resample()
+
 
 # ==============================================================================
 # Jackknife

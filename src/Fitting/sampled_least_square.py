@@ -11,7 +11,7 @@ import itertools
 from .fitting_base import FitBase
 from .fitting_helpers import * # cov,cor,cov_fit_param,cov_fit_param_est
 from qcdanalysistools.stats import AIC_chisq, AICc_chisq
-from ..analysis import estimator,variance,resample,checkAnalysisType,Jackknife,Blocking,Bootstrap
+from ..analysis import estimator,variance,resample,get_sample,checkAnalysisType,Jackknife,Blocking,Bootstrap
 import warnings
 
 class Sampled_DiagonalLeastSquare(FitBase):
@@ -66,8 +66,8 @@ class Sampled_DiagonalLeastSquare(FitBase):
 
         # backup the average of the ordinate data for the statistics
         self.ordinate_frozen = self.ordinate
-
-        self.ordinate_var_frozen = estimator(self.analysis_params,self.data,t_observable=np.var)
+        self.ordinate_var_frozen = var(self.analysis_params,self.data)
+        #estimator(self.analysis_params,self.data,t_observable=np.var,axis=self.analysis_params['axis'])
 
     def chisq(self,params):
         r"""
@@ -156,7 +156,7 @@ class Sampled_DiagonalLeastSquare(FitBase):
 
         #ToDo: How to blocking?
         for i_sample in range(self.analysis_params.num_samples()):
-            print(f"Fitting on Sample: {i_sample}/{self.analysis_params.num_samples()}")
+            # print(f"Fitting on Sample: {i_sample}/{self.analysis_params.num_samples()}")
             # 1. Draw subdata set
             l_data = get_sample(self.analysis_params,self.data,t_k=i_sample)
 
@@ -188,7 +188,7 @@ class Sampled_DiagonalLeastSquare(FitBase):
         self.fit_stats['Param'] = np.average(param_per_sample,axis=0)
         # artificially compute the covariance matrix of the parameter from the backed up data
         # estimate the covariance with <Theta_i Theta_j> - <Theta_i><Theta_j>
-        self.fit_stats['Cov'] = cov_fit_param_est(param_per_sample,t_analysis_params=None)
+        self.fit_stats['Cov'] = cov_fit_param(self.abscissa,np.diag(1/self.ordinate_var),self.model,self.min_stats['x'])
         # compute and store the fit error
         self.fit_stats['Fit error'] = np.sqrt(np.diag(self.fit_stats['Cov']))
         # store best fit data points evaluated over xdata
@@ -411,8 +411,8 @@ class Sampled_CorrelatedLeastSquare(FitBase):
         # compute the hessian
         for i,j in itertools.product(range(self.model.num_params),repeat=2):
             for t1,t2 in itertools.product(range(self.abscissa.size),repeat=2):
-                xsq_hess[i,j] -= 2*(model_hess[i,j,t1]*self.ordinate_cov_inv[t1,t2]*(self.ordinate[t2]-model_res[t2]) \
-                                    -model_grad[i,t1]*self.ordinate_cov_inv[t1,t2]*model_grad[j,t2])
+                xsq_hess[i,j] -= 2*(model_hess[i,j,t1]*self.ordinate_cov_inv[t1,t2]*(self.ordinate[t2]-model_res[t2])
+                                   -  model_grad[i,t1]*self.ordinate_cov_inv[t1,t2]*model_grad[j,t2])
 
         return xsq_hess
 
@@ -431,13 +431,16 @@ class Sampled_CorrelatedLeastSquare(FitBase):
         param_per_sample = np.zeros( shape = (self.analysis_params.num_samples(),self.model.num_params) )
 
         # 1. Resample the data
-        l_data = resample(self.analysis_params,self.data)
+        # l_data = resample(self.analysis_params,self.data)
 
         for i_sample in range(self.analysis_params.num_samples()):
             #print(f"Fitting for sample: {i_sample}/{self.analysis_params.num_samples()}")
 
+            # 1. Resample the data
+            l_data = get_sample(self.analysis_params,self.data,t_k=i_sample,t_blk_k=None)
+
             #2. compute ordinate
-            self.ordinate = l_data[i_sample]
+            self.ordinate = np.mean(l_data,axis=self.analysis_params['axis'])
 
             # we could allow to compute the covariance only once for the full
             # data set. This would reduce computational costs and increase stability
@@ -445,7 +448,7 @@ class Sampled_CorrelatedLeastSquare(FitBase):
             if not self.frozen_cov_flag:
                 #2.1 compute covariance
                 # use the function from qcdanalysistools.fitting.fitting_helpers
-                self.ordinate_cov = cov(l_data[i_sample])
+                self.ordinate_cov = np.cov(l_data,rowvar=False)
 
                 # invert the covariance
                 try:
@@ -454,6 +457,7 @@ class Sampled_CorrelatedLeastSquare(FitBase):
                     warnings.warn(f"WARNING: Require SVD to invert covariance matrix.")
                     u,w,v = np.linalg.svd(self.ordinate_cov)
                     self.ordinate_cov_inv = np.dot(np.dot(np.transpose(v),np.diag(np.divide(np.ones(w.size),w,out=np.zeros(w.size),where=w<self.inv_acc**2))),np.transpose(u))
+
 
                 # check that the inversion worked
                 res_r = self.res(self.ordinate_cov @ self.ordinate_cov_inv)

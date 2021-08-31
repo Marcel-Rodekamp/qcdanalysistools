@@ -7,6 +7,7 @@ import numpy as np
 import scipy.optimize as opt
 import scipy.stats
 import itertools
+from ..analysis import estimator,variance,resample,get_sample,checkAnalysisType,Jackknife,Blocking,Bootstrap
 from .fitting_base import FitBase
 from .fitting_helpers import * # cov,cor,cov_fit_param
 from qcdanalysistools.stats import AIC_chisq, AICc_chisq
@@ -85,15 +86,8 @@ class DiagonalLeastSquare(FitBase):
                 if t_analysis_params is None:
                     # fallback to standard average if no analysis method is given
                     self.ordinate_var = np.var(self.data,axis=0)
-                elif t_analysis_params.analysis_type == "bootstrap":
-                    from qcdanalysistools.analysis.Bootstrap import var
-                    self.ordinate_var = var(self.data,self.analysis_params,axis=0)
-                elif t_analysis_params.analysis_type == "jackknife":
-                    from qcdanalysistools.analysis.Jackknife import var
-                    self.ordinate_var = var(self.data,self.analysis_params,axis=0)
-                elif t_analysis_params.analysis_type == "blocking":
-                    from qcdanalysistools.analysis.Blocking import var
-                    self.ordinate_var = var(self.data,self.analysis_params,axis=0)
+                else:
+                    self.ordinate_var = variance(t_analysis_params,self.data)
             else:
                 # If t_data is given and also variance of the ordinate just store it
                 if len(t_ordinate_var.shape) != 1:
@@ -318,7 +312,7 @@ class CorrelatedLeastSquare(FitBase):
             # Note: checks on data are already done in FitBase
             if t_ordinate_cov is None:
                 # use the function from qcdanalysistools.fitting.fitting_helpers
-                self.ordinate_cov = cov(self.data,self.analysis_params)
+                self.ordinate_cov = cov(t_analysis_params,t_data)
             else:
                 # If t_data is given and also variance of the ordinate just store it
                 if len(t_ordinate_cov.shape) != 2:
@@ -471,7 +465,7 @@ class CorrelatedLeastSquare(FitBase):
         # store best fit data points evaluated over xdata
         self.fit_stats['Best fit'] = self.model.apply(self.abscissa,*self.min_stats['x'])
         # compute and store the covariance matrix of the fit using implementation of .fitting_helpers
-        self.fit_stats['Cov'] = cov_fit_param(self.abscissa,self.ordinate,self.ordinate_cov_inv,self.model,self.min_stats['x'],self.inv_acc)
+        self.fit_stats['Cov'] = cov_fit_param(self.abscissa,self.ordinate_cov_inv,self.model,self.min_stats['x'],self.inv_acc)
         # compute and store the fit error
         self.fit_stats['Fit error'] = np.sqrt(np.diag(self.fit_stats['Cov']))
         # define the degrees of freedom
