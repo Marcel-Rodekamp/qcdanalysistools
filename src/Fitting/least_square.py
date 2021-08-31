@@ -203,7 +203,7 @@ class DiagonalLeastSquare(FitBase):
         # store best fit data points evaluated over xdata
         self.fit_stats['Best fit'] = self.model.apply(self.abscissa,*self.min_stats['x'])
         # compute and store the covariance matrix of the fit using implementation of .fitting_helpers
-        self.fit_stats['Cov'] = cov_fit_param(self.abscissa,self.ordinate,np.diag(np.divide(np.ones_like(self.ordinate_var),self.ordinate_var)),self.model,self.min_stats['x'])
+        self.fit_stats['Cov'] = cov_fit_param(self.abscissa,np.diag(np.divide(np.ones_like(self.ordinate_var),self.ordinate_var)),self.model,self.min_stats['x'])
         # compute and store the fit error
         self.fit_stats['Fit error'] = np.sqrt(np.diag(self.fit_stats['Cov']))
         # define the degrees of freedom

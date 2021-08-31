@@ -13,8 +13,8 @@ D = 48
 x = np.array([x for x in range(D)])
 
 # ordinate data
-y = np.array([[ x_**2 for x_ in x ] for _ in range(N) ],dtype=np.float)
-y += np.random.randn(N,D)
+y = 2*x #np.array([[ 3x_**2 for x_ in x ] for _ in range(N) ],dtype=np.float)
+# y += np.random.randn(N,D)
 
 
 # bootstrap params
@@ -85,7 +85,7 @@ plt.clf()
 
 
 print("Creating fitting base with data and bootstrap average", end="... ")
-f = fitting.DiagonalLeastSquare(m,x,t_data=y,t_analysis_params=bst_param)
+f = 
 if not np.allclose( f.ordinate,o_b ):
     raise RuntimeError(f"Ordinate computation failed \n {f.ordinate} \n {o_b}")
 if not np.allclose( f.ordinate_var,ov_b ):
