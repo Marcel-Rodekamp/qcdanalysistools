@@ -181,7 +181,7 @@ class AnalysisParam(dict):
     def num_samples(self):
         if checkAnalysisType(self.AnalysisType,Bootstrap):
             if self.get('use_blocking'):
-                return self.get('N_bst')*self.get('N_blk')
+                return self.get('blk_size')*self.get('N_blk')
             else:
                 return self.get('N_bst')
         elif checkAnalysisType(self.AnalysisType,Jackknife):
