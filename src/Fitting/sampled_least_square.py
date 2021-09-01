@@ -13,6 +13,7 @@ from .fitting_helpers import * # cov,cor,cov_fit_param,cov_fit_param_est
 from qcdanalysistools.stats import AIC_chisq, AICc_chisq
 from ..analysis import estimator,variance,resample,get_sample,checkAnalysisType,Jackknife,Blocking,Bootstrap
 import warnings
+from tqdm.auto import tqdm
 
 class Sampled_DiagonalLeastSquare(FitBase):
     def __init__(self,t_model,t_abscissa,t_data,t_analysis_params):
@@ -154,7 +155,7 @@ class Sampled_DiagonalLeastSquare(FitBase):
         """
         param_per_sample = np.zeros( shape = (self.analysis_params.num_samples(),self.model.num_params) )
 
-        for i_sample in self.analysis_params.iterate_samples():
+        for i_sample in tqdm(self.analysis_params.iterate_samples(),total=self.analysis_params.num_samples(),desc=f"Sampled ({self.analysis_params.AnalysisType.__name__}) Diagonal Least Square"):
             # print(f"Fitting on Sample: {i_sample}/{self.analysis_params.num_samples()}")
             # 1. Draw subdata set
             l_data = get_sample(self.analysis_params,self.data,*i_sample)
@@ -429,7 +430,7 @@ class Sampled_CorrelatedLeastSquare(FitBase):
         """
         param_per_sample = np.zeros( shape = (self.analysis_params.num_samples(),self.model.num_params) )
 
-        for i_sample in self.analysis_params.iterate_samples():
+        for i_sample in tqdm(self.analysis_params.iterate_samples(),total=self.analysis_params.num_samples(),desc=f"Sampled ({self.analysis_params.AnalysisType.__name__}) Correlated Least Square"):
             #print(f"Fitting for sample: {i_sample}/{self.analysis_params.num_samples()}")
 
             # 1. Resample the data
