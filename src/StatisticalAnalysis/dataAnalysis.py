@@ -206,8 +206,7 @@ class AnalysisParam(dict):
         if checkAnalysisType(self.AnalysisType,Bootstrap) or checkAnalysisType(self.AnalysisType,Jackknife):
             if self.get('use_blocking'):
                 return sample_iterator_element[0] * self.get('N_blk') + sample_iterator_element[1]
-        else:
-            return sample_iterator_element[0]
+        return sample_iterator_element[0]
 
 
 def get_sample(t_param,t_data,t_k,t_blk_k=None):
