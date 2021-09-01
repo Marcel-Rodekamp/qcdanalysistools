@@ -9,7 +9,7 @@ def res(A):
 def cov(t_param,t_data):
     cov = np.zeros(shape=(t_param.num_samples(),t_data.shape[-1],t_data.shape[-1]))
     for i_sample in t_param.iterate_samples():
-        sample = get_sample(t_param,t_data,i_sample)
+        sample = get_sample(t_param,t_data,*i_sample)
 
         cov[i_sample,:,:] = np.cov(sample,rowvar=False)
 
@@ -19,7 +19,7 @@ def cov(t_param,t_data):
 def var(t_param,t_data):
     cov = np.zeros(shape=(t_param.num_samples(),t_data.shape[-1]))
     for i_sample in t_param.iterate_samples():
-        sample = get_sample(t_param,t_data,i_sample)
+        sample = get_sample(t_param,t_data,*i_sample)
 
         cov[i_sample,:] = np.var(sample,axis=t_param['axis'])
 

@@ -61,11 +61,15 @@ class AnalysisParam(dict):
 
             # set block_size
             self.__setitem__('blk_size', self.get('data_size')//self.get('N_blk'))
+            bst_max = self.get('blk_size')
+        else:
+            bst_max = self.get('data_size')
 
-        self.bst_table = np.zeros(shape=( self.get('N_bst'), self.get('data_size')), dtype=int)
+        # self.bst_table = np.zeros(shape=( self.get('N_bst'), self.get('data_size')), dtype=int)
+        self.bst_table = np.zeros(shape=( self.get('N_bst'), bst_max), dtype=int)
         for k in range(self.get('N_bst')):
-            self.bst_table[k,:] = np.random.randint(0,high=self.get('data_size'),size=self.get('data_size'))
-
+            # self.bst_table[k,:] = np.random.randint(0,high=self.get('data_size'),size=self.get('data_size'))
+            self.bst_table[k,:] = np.random.randint(0,high=bst_max,size=bst_max)
 
         if 'store_bst_samples' not in kwargs:
             self.setdefault('store_bst_samples', default=False)
@@ -186,7 +190,19 @@ class AnalysisParam(dict):
 
     def iterate_samples(self):
         # ToDo: Generalize for blocked bst/jkn
-        return range(self.num_samples())
+        if checkAnalysisType(self.AnalysisType,Bootstrap) or checkAnalysisType(self.AnalysisType,Jackknife):
+            if self.get('use_blocking'):
+                return itertools.product(range(self.get('blk_size')),range(self.get('N_blk')))
+
+        return itertools.product(range(self.num_samples()))
+
+    def get_sampleID(self,sample_iterator_element):
+        if checkAnalysisType(self.AnalysisType,Bootstrap) or checkAnalysisType(self.AnalysisType,Jackknife):
+            if self.get('use_blocking'):
+                return sample_iterator_element[0] * self.get('N_blk') + sample_iterator_element[1]
+        else:
+            return sample_iterator_element[0]
+
 
 def get_sample(t_param,t_data,t_k,t_blk_k=None):
     def _get_bst_sample(t_data):
@@ -207,7 +223,6 @@ def get_sample(t_param,t_data,t_k,t_blk_k=None):
             sample = t_data.take(range(t_k*t_param['blk_size'],t_data.shape[t_param['axis']]),axis=t_param['axis'])
         else:
             sample = t_data.take(range(t_k*t_param['blk_size'],(t_k+1)*t_param['blk_size']),axis=t_param['axis'])
-
         return sample
 
     # ==========================================================================

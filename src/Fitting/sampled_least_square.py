@@ -154,11 +154,10 @@ class Sampled_DiagonalLeastSquare(FitBase):
         """
         param_per_sample = np.zeros( shape = (self.analysis_params.num_samples(),self.model.num_params) )
 
-        #ToDo: How to blocking?
-        for i_sample in range(self.analysis_params.num_samples()):
+        for i_sample in self.analysis_params.iterate_samples():
             # print(f"Fitting on Sample: {i_sample}/{self.analysis_params.num_samples()}")
             # 1. Draw subdata set
-            l_data = get_sample(self.analysis_params,self.data,t_k=i_sample)
+            l_data = get_sample(self.analysis_params,self.data,*i_sample)
 
             #2. compute ordinate and variance
             self.ordinate = np.average(l_data,axis=0)
@@ -181,8 +180,8 @@ class Sampled_DiagonalLeastSquare(FitBase):
                     self.min_stats = res
 
             # store the best fit parameters to average
-            param_per_sample[i_sample,:] = self.min_stats['x']
-
+            param_per_sample[self.analysis_params.get_sampleID(i_sample),:] = self.min_stats['x']
+        # print(param_per_sample)
         # 5. Get fit statistics
         # store the best fit parameter
         self.fit_stats['Param'] = np.average(param_per_sample,axis=0)
@@ -430,14 +429,11 @@ class Sampled_CorrelatedLeastSquare(FitBase):
         """
         param_per_sample = np.zeros( shape = (self.analysis_params.num_samples(),self.model.num_params) )
 
-        # 1. Resample the data
-        # l_data = resample(self.analysis_params,self.data)
-
-        for i_sample in range(self.analysis_params.num_samples()):
+        for i_sample in self.analysis_params.iterate_samples():
             #print(f"Fitting for sample: {i_sample}/{self.analysis_params.num_samples()}")
 
             # 1. Resample the data
-            l_data = get_sample(self.analysis_params,self.data,t_k=i_sample,t_blk_k=None)
+            l_data = get_sample(self.analysis_params,self.data,*i_sample)
 
             #2. compute ordinate
             self.ordinate = np.mean(l_data,axis=self.analysis_params['axis'])
@@ -485,7 +481,7 @@ class Sampled_CorrelatedLeastSquare(FitBase):
                     self.min_stats = res
 
             # store the best fit parameters to average
-            param_per_sample[i_sample,:] = self.min_stats['x']
+            param_per_sample[self.analysis_params.get_sampleID(i_sample),:] = self.min_stats['x']
 
         # 5. Get fit statistics
         # store the best fit parameter
