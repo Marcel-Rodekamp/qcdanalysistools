@@ -181,7 +181,7 @@ class AnalysisParam(dict):
     def num_samples(self):
         if checkAnalysisType(self.AnalysisType,Bootstrap):
             if self.get('use_blocking'):
-                return self.get('blk_size')*self.get('N_blk')
+                return self.get('N_bst')*self.get('N_blk')
             else:
                 return self.get('N_bst')
         elif checkAnalysisType(self.AnalysisType,Jackknife):
@@ -196,9 +196,10 @@ class AnalysisParam(dict):
 
     def iterate_samples(self):
         # ToDo: Generalize for blocked bst/jkn
-        if checkAnalysisType(self.AnalysisType,Bootstrap) or checkAnalysisType(self.AnalysisType,Jackknife):
-            if self.get('use_blocking'):
-                return itertools.product(range(self.get('blk_size')),range(self.get('N_blk')))
+        if checkAnalysisType(self.AnalysisType,Bootstrap) and self.get('use_blocking'):
+            return itertools.product(range(self.get('N_bst')),range(self.get('N_blk')))
+        elif checkAnalysisType(self.AnalysisType,Jackknife) and self.get('use_blocking'):
+            return itertools.product(range(self.get('blk_size')),range(self.get('N_blk')))
 
         return itertools.product(range(self.num_samples()))
 
