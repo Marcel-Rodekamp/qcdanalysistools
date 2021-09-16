@@ -11,7 +11,7 @@ import itertools
 from .fitting_base import FitBase
 from .fitting_helpers import * # cov,cor,cov_fit_param,cov_fit_param_est
 from qcdanalysistools.stats import AIC_chisq, AICc_chisq
-from ..analysis import estimator,variance,resample,get_sample,checkAnalysisType,Jackknife,Blocking,Bootstrap
+from ..analysis import estimator,variance,get_sample,checkAnalysisType,Jackknife,Blocking,Bootstrap
 import warnings
 from tqdm.auto import tqdm
 

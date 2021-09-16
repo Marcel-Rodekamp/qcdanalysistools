@@ -1,6 +1,6 @@
 import numpy as np
 import itertools
-from ..analysis import resample,get_sample,estimator,checkAnalysisType
+from ..analysis import get_sample,estimator,checkAnalysisType
 import warnings
 
 def res(A):

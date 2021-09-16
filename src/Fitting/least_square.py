@@ -7,7 +7,7 @@ import numpy as np
 import scipy.optimize as opt
 import scipy.stats
 import itertools
-from ..analysis import estimator,variance,resample,get_sample,checkAnalysisType,Jackknife,Blocking,Bootstrap
+from ..analysis import estimator,variance,get_sample,checkAnalysisType,Jackknife,Blocking,Bootstrap
 from .fitting_base import FitBase
 from .fitting_helpers import * # cov,cor,cov_fit_param
 from qcdanalysistools.stats import AIC_chisq, AICc_chisq
