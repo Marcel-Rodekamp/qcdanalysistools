@@ -74,7 +74,7 @@ class AnalysisParam(dict):
             bst_max = self.get('data_size')
 
         # self.bst_table = np.zeros(shape=( self.get('N_bst'), self.get('data_size')), dtype=int)
-        self.bst_table = np.random.randint(0,high=bst_max,size=self.get('N_bst')) #np.zeros(shape=( self.get('N_bst'), bst_max), dtype=int)
+        self.bst_table = np.random.randint(0,high=bst_max,size=(self.get('N_bst'),bst_max)) #np.zeros(shape=( self.get('N_bst'), bst_max), dtype=int)
         # for k in range(self.get('N_bst')):
         #     self.bst_table[k,:] = np.random.randint(0,high=self.get('data_size'),size=self.get('data_size'))
             # self.bst_table[k,:] = np.random.randint(0,high=bst_max,size=bst_max)
@@ -390,7 +390,7 @@ def _bootstrap_est(t_param,t_data,t_observable=None,**obs_kwargs):
 
     bst_data = np.zeros(shape=(t_param.num_samples(), *t_param.get_remainder_dim(t_data.shape)), dtype=t_data.dtype)
     for k in t_param.iterate_samples():
-        bst_data[k,...] = get_sample(t_param,obs,k)
+        bst_data[k,...] = np.mean(get_sample(t_param,obs,k),axis=t_param['axis'])
 
     return np.mean(bst_data,axis=0)
 
@@ -402,7 +402,7 @@ def _bootstrap_var(t_param,t_data,t_observable=None,**obs_kwargs):
 
     bst_data = np.zeros(shape=(t_param.num_samples(), *t_param.get_remainder_dim(t_data.shape)), dtype=t_data.dtype)
     for k in t_param.iterate_samples():
-        bst_data[k,...] = get_sample(t_param,obs,k)
+        bst_data[k,...] = np.mean(get_sample(t_param,obs,k),axis=t_param['axis'])
 
     return np.var(bst_data,axis=0)
 
@@ -414,7 +414,7 @@ def _bootstrap(t_param,t_data,t_observable=None,**obs_kwargs):
 
     bst_data = np.zeros(shape=(t_param.num_samples(), *t_param.get_remainder_dim(t_data.shape)), dtype=t_data.dtype)
     for k in t_param.iterate_samples():
-        bst_data[k,...] = get_sample(t_param,obs,k)
+        bst_data[k,...] = np.mean(get_sample(t_param,obs,k),axis=t_param['axis'])
 
     return np.mean(bst_data,axis=0), np.var(bst_data,axis=0)
 
